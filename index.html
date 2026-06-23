@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Bhanu // 3D Rover Sandbox Portfolio</title>
-    <meta name="description" content="Drive a 3D rover around a low-poly playground sandbox to discover projects, skills, and contact transmissions. Inspired by Bruno Simon and Thibault Introvigne.">
+    <title>Bhanu // 3D Xeno-Explorer Portfolio</title>
+    <meta name="description" content="Explore Bhanu's portfolio as a high-tech hover drone. Glide over alien soil, crash glowing crystals, inspect obsidian monoliths, and transmit contact data. Built with Three.js.">
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -24,13 +24,13 @@
     <div id="game-hud">
         <!-- Top Navigation Header -->
         <header id="game-header">
-            <div class="logo">Bhanu <span class="logo-mode">// ROVER_SANDBOX v1.2</span></div>
+            <div class="logo">Bhanu <span class="logo-mode">// XENO_EXPLORER v2.0</span></div>
             <nav class="hud-nav">
                 <a href="#welcome" class="hud-nav-item" data-target="welcome">WELCOME</a>
                 <a href="#about" class="hud-nav-item" data-target="about">BIO_BOARD</a>
-                <a href="#quests" class="hud-nav-item" data-target="quests">QUESTS</a>
-                <a href="#skills" class="hud-nav-item" data-target="skills">SKILLS</a>
-                <a href="#contact" class="hud-nav-item" data-target="contact">CONTACT_TOWER</a>
+                <a href="#quests" class="hud-nav-item" data-target="quests">MONOLITHS</a>
+                <a href="#skills" class="hud-nav-item" data-target="skills">SKILLS_NODE</a>
+                <a href="#contact" class="hud-nav-item" data-target="contact">BEACON_TOWER</a>
             </nav>
             <button id="hud-sound-toggle" class="sound-toggle-btn" title="Toggle Game Audio">
                 <svg id="sound-on-svg" viewBox="0 0 24 24" width="18" height="18">
@@ -52,24 +52,24 @@
 
         <!-- How To Play Overlay (Instructions Widget) -->
         <div id="instructions-card" class="hud-instructions">
-            <h3>ROVER MANUAL</h3>
+            <h3>DRONE TELEMETRY MANUAL</h3>
             <div class="controls-list">
                 <div class="control-row">
                     <span class="control-key">W</span> <span class="control-key">S</span> / <span class="control-key">↑</span> <span class="control-key">↓</span>
-                    <span class="control-desc">Accelerate / Reverse</span>
+                    <span class="control-desc">Thrust Forward / Back</span>
                 </div>
                 <div class="control-row">
                     <span class="control-key">A</span> <span class="control-key">D</span> / <span class="control-key">←</span> <span class="control-key">→</span>
-                    <span class="control-desc">Steering Turn</span>
+                    <span class="control-desc">Hover Yaw Steer</span>
                 </div>
             </div>
             <ul class="manual-tips">
-                <li>Drive up the wooden ramp to jump</li>
-                <li>Crash into stacked gold crates to scatter them</li>
-                <li>Drive through project arches to unlock quest logs</li>
-                <li>Drive to satellite tower (back) to start transmission</li>
+                <li>Glide over floating magnetic ramps to jump</li>
+                <li>Crash into glowing xeno-crystals to shatter them</li>
+                <li>Approach obsidian monoliths to read logs</li>
+                <li>Enter the radar circle (back) to establish link</li>
             </ul>
-            <button id="close-instructions-btn" class="manual-close-btn">DISMISS</button>
+            <button id="close-instructions-btn" class="manual-close-btn">DISMISS MANUAL</button>
         </div>
 
         <!-- Trigger Zone Status Indicator (Bottom Center HUD) -->
@@ -95,52 +95,52 @@
     <div id="project-templates" class="hidden">
         <!-- Neon Racer template -->
         <div id="template-neon">
-            <span class="popup-badge text-green">QUEST // PERFORMANCE</span>
+            <span class="popup-badge text-green">MONOLITH // NEON RACER</span>
             <h2>Neon Racer</h2>
             <p>An adrenaline-fueled cyberpunk racing simulation. Programmed custom hover thruster physics, procedural track generation meshes, and responsive vector math in Unity Engine.</p>
             <div class="popup-tags">
-                <span class="tag">Unity</span>
-                <span class="tag">C# Scripting</span>
-                <span class="tag">PhysX</span>
-                <span class="tag">Procedural Gen</span>
+                <span class="tag">Unity 3D</span>
+                <span class="tag">C# Cores</span>
+                <span class="tag">Physics Vector</span>
+                <span class="tag">Procedural Track</span>
             </div>
             <a href="https://github.com" target="_blank" class="popup-link-btn border-green">Inspect Git Repository</a>
         </div>
 
         <!-- Void Walker template -->
         <div id="template-void">
-            <span class="popup-badge text-pink">QUEST // MECHANICS</span>
+            <span class="popup-badge text-pink">MONOLITH // VOID WALKER</span>
             <h2>Void Walker</h2>
             <p>An atmospheric platformer exploring dimension shifting. Implemented a robust 2D physics parser, gravitational vector shifts, and custom shader displacement fields in Godot.</p>
             <div class="popup-tags">
-                <span class="tag">Godot</span>
+                <span class="tag">Godot Engine</span>
                 <span class="tag">GDScript</span>
-                <span class="tag">Vector Physics</span>
-                <span class="tag">Shaders</span>
+                <span class="tag">Gravity Math</span>
+                <span class="tag">Canvas Shaders</span>
             </div>
             <a href="https://github.com" target="_blank" class="popup-link-btn border-pink">Inspect Git Repository</a>
         </div>
 
         <!-- Cyber Defense template -->
         <div id="template-defense">
-            <span class="popup-badge text-cyan">QUEST // SYSTEMS</span>
+            <span class="popup-badge text-cyan">MONOLITH // CYBER DEFENSE</span>
             <h2>Cyber Defense</h2>
             <p>A procedural tactical mainframe defense game. Architected custom pathfinding grids, optimized volumetric laser beam rendering, and multi-threaded AI agent waves in Unreal 5.</p>
             <div class="popup-tags">
                 <span class="tag">Unreal Engine 5</span>
-                <span class="tag">C++ Cores</span>
-                <span class="tag">AI Systems</span>
-                <span class="tag">Shader Graphs</span>
+                <span class="tag">C++ Systems</span>
+                <span class="tag">AI Navigation</span>
+                <span class="tag">Volumetric VFX</span>
             </div>
             <a href="https://github.com" target="_blank" class="popup-link-btn border-cyan">Inspect Git Repository</a>
         </div>
 
         <!-- Contact form template -->
         <div id="template-contact">
-            <span class="popup-badge text-cyan">TRANSMISSION SOCKET</span>
-            <h2>Initiate Link</h2>
-            <p>Ready to collaborate on physics simulations, WebGL rendering architectures, or engine development. Drop a message to establish connection.</p>
-            <a href="mailto:hello@gamerscraft.com" class="popup-link-btn border-cyan glow-cyan" style="margin-bottom: 15px;">START TRANSMISSION</a>
+            <span class="popup-badge text-cyan">BEACON LINK INITIATOR</span>
+            <h2>Establish Link</h2>
+            <p>Ready to collaborate on physics simulations, WebGL rendering architectures, or interactive game engines. Initiate transceiver socket connection.</p>
+            <a href="mailto:hello@gamerscraft.com" class="popup-link-btn border-cyan glow-cyan" style="margin-bottom: 15px;">TRANSMIT INQUIRY</a>
             <div class="popup-socials">
                 <a href="https://github.com" target="_blank">GITHUB</a>
                 <a href="https://linkedin.com" target="_blank">LINKEDIN</a>

@@ -17,9 +17,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const key = e.key.toLowerCase();
         keys[key] = true;
         
-        // Trigger generic typing/moving sounds occasionally
+        // Trigger generic hovering/thrusting sounds occasionally
         if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(key)) {
-            if (Math.random() > 0.85) {
+            if (Math.random() > 0.88) {
                 audio.playHover();
             }
         }
@@ -97,14 +97,14 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Inject correct template
             if (zone.type === 'project') {
-                indicatorText.textContent = `QUEST DETECTED: ACCESSING ${zone.name.toUpperCase()} DATA...`;
+                indicatorText.textContent = `MONOLITH SYNC: ENCODING ${zone.name.toUpperCase()} DATAFRAMES...`;
                 const template = templates.querySelector(`#template-${zone.name}`);
                 if (template) {
                     popupContent.innerHTML = template.innerHTML;
                     infoOverlay.classList.remove('hidden');
                 }
             } else if (zone.type === 'contact') {
-                indicatorText.textContent = 'TRANSMISSION ANOMALY: SATELLITE DISH LINKED';
+                indicatorText.textContent = 'BEACON ANOMALY: TRANSCEIVER SOCKET SECURED';
                 const template = templates.querySelector('#template-contact');
                 if (template) {
                     popupContent.innerHTML = template.innerHTML;
@@ -134,17 +134,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // -----------------------------------------------------------------
-    // 5. Minimal Navigation bar & Vehicle Teleportation
+    // 5. Navigation Teleportation coordinates
     // -----------------------------------------------------------------
     const navItems = document.querySelectorAll('.hud-nav-item');
     
-    // Coordinates mapping for navigation teleport
+    // Teleport points relative to XenoWorld coordinates
     const targets = {
         welcome: { x: 0, z: 0, heading: 0 },
-        about: { x: -18, z: 7, heading: Math.PI }, // Facing Profile Board
-        quests: { x: 0, z: -25, heading: Math.PI }, // In front of project gates facing them
-        skills: { x: 18, z: 12, heading: Math.PI / 4 }, // Facing Skill board
-        contact: { x: 0, z: 31, heading: 0 } // In satellite ring
+        about: { x: -18, z: 7, heading: Math.PI }, // Facing Bio board sign
+        quests: { x: 0, z: -25, heading: Math.PI }, // Facing Obsidian Monoliths
+        skills: { x: 18, z: 12, heading: Math.PI / 4 }, // Facing Skills board sign
+        contact: { x: 0, z: 31, heading: 0 } // Inside Beacon ring
     };
 
     navItems.forEach(item => {
@@ -155,24 +155,24 @@ document.addEventListener('DOMContentLoaded', () => {
             const targetName = item.dataset.target;
             const coord = targets[targetName];
             
-            if (coord && glManager.rover) {
+            if (coord && glManager.drone) {
                 // Flash indicator in HUD
                 zoneIndicator.classList.remove('hidden');
-                indicatorText.textContent = `TELEPORTING VEHICLE TO ${targetName.toUpperCase()}...`;
+                indicatorText.textContent = `TELEPORTING DRONE TELEMETRY TO ${targetName.toUpperCase()}...`;
                 
-                // Teleport vehicle
-                glManager.rover.teleportTo(coord.x, coord.z, coord.heading);
+                // Teleport Drone
+                glManager.drone.teleportTo(coord.x, coord.z, coord.heading);
                 
                 // Audio Chime
                 setTimeout(() => {
                     audio.playSuccess();
-                }, 100);
+                }, 120);
 
-                // Update active link state visually
+                // Update active link visually
                 navItems.forEach(nav => nav.classList.remove('active'));
                 item.classList.add('active');
 
-                // Auto hide teleport hud after 2 seconds if no zone active
+                // Auto hide status indicator after 2 seconds if no zone active
                 setTimeout(() => {
                     if (!currentActiveZone) {
                         zoneIndicator.classList.add('hidden');
@@ -189,7 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const soundOnSvg = document.getElementById('sound-on-svg');
     const soundOffSvg = document.getElementById('sound-off-svg');
 
-    // Trigger AudioContext initialization on first interaction
+    // Initialize AudioContext on first interaction
     const initAudioContext = () => {
         audio.init();
         document.removeEventListener('click', initAudioContext);
