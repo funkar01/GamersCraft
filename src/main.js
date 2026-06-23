@@ -16,13 +16,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const onKeyDown = (e) => {
         const key = e.key.toLowerCase();
         keys[key] = true;
-        
-        // Trigger generic hovering/thrusting sounds occasionally
-        if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(key)) {
-            if (Math.random() > 0.88) {
-                audio.playHover();
-            }
-        }
     };
 
     const onKeyUp = (e) => {
@@ -43,7 +36,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const press = (e) => {
             e.preventDefault();
             keys[keyCode] = true;
-            audio.playHover();
         };
 
         const release = (e) => {
@@ -90,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentActiveZone = zone;
             openedByZone = true;
             
-            audio.playSuccess();
+            audio.playZoneSync(zone.type === 'project' ? zone.name : 'contact');
             
             // Show HUD Status bar
             zoneIndicator.classList.remove('hidden');
@@ -150,7 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
     navItems.forEach(item => {
         item.addEventListener('click', (e) => {
             e.preventDefault();
-            audio.playClick();
+            audio.playTeleport();
             
             const targetName = item.dataset.target;
             const coord = targets[targetName];
@@ -165,7 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Audio Chime
                 setTimeout(() => {
-                    audio.playSuccess();
+                    audio.playZoneSync(targetName);
                 }, 120);
 
                 // Update active link visually

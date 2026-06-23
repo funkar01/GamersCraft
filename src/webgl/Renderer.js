@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Drone } from './Drone.js';
 import { XenoWorld } from './XenoWorld.js';
+import { audio } from '../ui/AudioEngine.js';
 
 export class WebGLRendererManager {
     constructor(canvasContainerId) {
@@ -33,8 +34,8 @@ export class WebGLRendererManager {
     init() {
         // --- 1. Scene Setup ---
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x160c28); // Vibrant deep space purple sunset
-        this.scene.fog = new THREE.FogExp2(0x160c28, 0.02); // Inviting atmospheric fog
+        this.scene.background = new THREE.Color(0x0c1616); // Dark slate-teal color matching new landscape style
+        this.scene.fog = new THREE.FogExp2(0x0c1616, 0.02); // Cohesive atmospheric fog
 
         // --- 2. Camera Setup ---
         this.camera = new THREE.PerspectiveCamera(
@@ -271,6 +272,10 @@ export class WebGLRendererManager {
         if (this.drone) {
             this.drone.update(delta, this.keys, this.playground, time);
             
+            // Sync dynamic flight hover sound
+            const velocityRatio = Math.abs(this.drone.velocity) / this.drone.maxSpeed;
+            audio.updateDroneSound(velocityRatio);
+
             // Sync dynamic under-glow thruster PointLight directly to drone positions
             if (this.droneGlow) {
                 this.droneGlow.position.set(
