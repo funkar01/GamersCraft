@@ -1,287 +1,241 @@
 import { WebGLRendererManager } from './webgl/Renderer.js';
-import { ParticlesCartridge } from './webgl/Particles.js';
-import { PlanetCartridge } from './webgl/Planet.js';
-import { LifeCartridge } from './webgl/Life.js';
-import { CompanionBot } from './webgl/Companion.js';
-import { Terminal } from './ui/Terminal.js';
 import { audio } from './ui/AudioEngine.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // -----------------------------------------------------------------
-    // 1. Initialize WebGL Stack
+    // 1. Initialize WebGL Manager
     // -----------------------------------------------------------------
     const glManager = new WebGLRendererManager('canvas-container');
-    
-    const vortex = new ParticlesCartridge();
-    const planet = new PlanetCartridge();
-    const life = new LifeCartridge();
-    
-    glManager.registerCartridge('vortex', vortex);
-    glManager.registerCartridge('planet', planet);
-    glManager.registerCartridge('life', life);
-    
-    const companion = new CompanionBot();
-    glManager.registerCompanion(companion);
-    
-    // Start with Gravity Vortex
-    glManager.switchCartridge('vortex');
 
     // -----------------------------------------------------------------
-    // 2. Initialize Draggable Terminal CLI
+    // 2. Keyboard Inputs Tracker
     // -----------------------------------------------------------------
-    const terminal = new Terminal('terminal-container', {
-        onCommand: (action, value) => {
-            if (action === 'cartridge') {
-                glManager.switchCartridge(value);
-                syncCartridgeActiveUI(value);
+    const keys = {};
+    glManager.keys = keys; // Bind keys to renderer manager
+
+    const onKeyDown = (e) => {
+        const key = e.key.toLowerCase();
+        keys[key] = true;
+        
+        // Trigger generic typing/moving sounds occasionally
+        if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(key)) {
+            if (Math.random() > 0.85) {
+                audio.playHover();
             }
         }
+    };
+
+    const onKeyUp = (e) => {
+        const key = e.key.toLowerCase();
+        keys[key] = false;
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+
+    // -----------------------------------------------------------------
+    // 3. Mobile D-Pad Touch Controls
+    // -----------------------------------------------------------------
+    const mapMobileBtn = (elementId, keyCode) => {
+        const btn = document.getElementById(elementId);
+        if (!btn) return;
+
+        const press = (e) => {
+            e.preventDefault();
+            keys[keyCode] = true;
+            audio.playHover();
+        };
+
+        const release = (e) => {
+            e.preventDefault();
+            keys[keyCode] = false;
+        };
+
+        btn.addEventListener('mousedown', press);
+        btn.addEventListener('mouseup', release);
+        btn.addEventListener('mouseleave', release);
+        
+        btn.addEventListener('touchstart', press, { passive: false });
+        btn.addEventListener('touchend', release, { passive: false });
+        btn.addEventListener('touchcancel', release, { passive: false });
+    };
+
+    // Map D-pad buttons to key inputs
+    mapMobileBtn('mobile-drive-up', 'w');
+    mapMobileBtn('mobile-drive-down', 's');
+    mapMobileBtn('mobile-steer-left', 'a');
+    mapMobileBtn('mobile-steer-right', 'd');
+
+    // -----------------------------------------------------------------
+    // 4. Interactive Zones & Modal Popups
+    // -----------------------------------------------------------------
+    const infoOverlay = document.getElementById('info-overlay');
+    const popupContent = document.getElementById('popup-content');
+    const popupClose = document.getElementById('popup-close');
+    const zoneIndicator = document.getElementById('hud-zone-indicator');
+    const indicatorText = document.getElementById('indicator-text');
+    const templates = document.getElementById('project-templates');
+    
+    let currentActiveZone = null;
+    let openedByZone = false;
+
+    // Monitor playground collision zones
+    glManager.playground.onEnterZone = (zone) => {
+        if (zone) {
+            // Already in this exact zone, do nothing
+            if (currentActiveZone && currentActiveZone.type === zone.type && currentActiveZone.name === zone.name) {
+                return;
+            }
+            
+            currentActiveZone = zone;
+            openedByZone = true;
+            
+            audio.playSuccess();
+            
+            // Show HUD Status bar
+            zoneIndicator.classList.remove('hidden');
+            
+            // Inject correct template
+            if (zone.type === 'project') {
+                indicatorText.textContent = `QUEST DETECTED: ACCESSING ${zone.name.toUpperCase()} DATA...`;
+                const template = templates.querySelector(`#template-${zone.name}`);
+                if (template) {
+                    popupContent.innerHTML = template.innerHTML;
+                    infoOverlay.classList.remove('hidden');
+                }
+            } else if (zone.type === 'contact') {
+                indicatorText.textContent = 'TRANSMISSION ANOMALY: SATELLITE DISH LINKED';
+                const template = templates.querySelector('#template-contact');
+                if (template) {
+                    popupContent.innerHTML = template.innerHTML;
+                    infoOverlay.classList.remove('hidden');
+                }
+            }
+        } else {
+            // Left the zone
+            if (currentActiveZone) {
+                currentActiveZone = null;
+                zoneIndicator.classList.add('hidden');
+                
+                // If the modal was opened by driving into a zone, close it automatically when driving away
+                if (openedByZone) {
+                    infoOverlay.classList.add('hidden');
+                    openedByZone = false;
+                }
+            }
+        }
+    };
+
+    // Manual Close Modal
+    popupClose.addEventListener('click', () => {
+        audio.playClick();
+        infoOverlay.classList.add('hidden');
+        openedByZone = false; // block automatic opening until re-entering
     });
 
     // -----------------------------------------------------------------
-    // 3. Audio / Mute Controls
+    // 5. Minimal Navigation bar & Vehicle Teleportation
     // -----------------------------------------------------------------
-    const muteToggle = document.getElementById('mute-toggle');
-    const soundOnIcon = document.getElementById('sound-on-icon');
-    const soundOffIcon = document.getElementById('sound-off-icon');
-    const muteText = muteToggle.querySelector('.hud-btn-text');
-
-    // Initialize AudioContext on first click anywhere
-    const unlockAudio = () => {
-        audio.init();
-        document.removeEventListener('click', unlockAudio);
-        document.removeEventListener('keydown', unlockAudio);
+    const navItems = document.querySelectorAll('.hud-nav-item');
+    
+    // Coordinates mapping for navigation teleport
+    const targets = {
+        welcome: { x: 0, z: 0, heading: 0 },
+        about: { x: -18, z: 7, heading: Math.PI }, // Facing Profile Board
+        quests: { x: 0, z: -25, heading: Math.PI }, // In front of project gates facing them
+        skills: { x: 18, z: 12, heading: Math.PI / 4 }, // Facing Skill board
+        contact: { x: 0, z: 31, heading: 0 } // In satellite ring
     };
-    document.addEventListener('click', unlockAudio);
-    document.addEventListener('keydown', unlockAudio);
 
-    muteToggle.addEventListener('click', () => {
+    navItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            audio.playClick();
+            
+            const targetName = item.dataset.target;
+            const coord = targets[targetName];
+            
+            if (coord && glManager.rover) {
+                // Flash indicator in HUD
+                zoneIndicator.classList.remove('hidden');
+                indicatorText.textContent = `TELEPORTING VEHICLE TO ${targetName.toUpperCase()}...`;
+                
+                // Teleport vehicle
+                glManager.rover.teleportTo(coord.x, coord.z, coord.heading);
+                
+                // Audio Chime
+                setTimeout(() => {
+                    audio.playSuccess();
+                }, 100);
+
+                // Update active link state visually
+                navItems.forEach(nav => nav.classList.remove('active'));
+                item.classList.add('active');
+
+                // Auto hide teleport hud after 2 seconds if no zone active
+                setTimeout(() => {
+                    if (!currentActiveZone) {
+                        zoneIndicator.classList.add('hidden');
+                    }
+                }, 2000);
+            }
+        });
+    });
+
+    // -----------------------------------------------------------------
+    // 6. Sound Synthesizer Controls
+    // -----------------------------------------------------------------
+    const soundToggle = document.getElementById('hud-sound-toggle');
+    const soundOnSvg = document.getElementById('sound-on-svg');
+    const soundOffSvg = document.getElementById('sound-off-svg');
+
+    // Trigger AudioContext initialization on first interaction
+    const initAudioContext = () => {
+        audio.init();
+        document.removeEventListener('click', initAudioContext);
+        document.removeEventListener('keydown', initAudioContext);
+    };
+    document.addEventListener('click', initAudioContext);
+    document.addEventListener('keydown', initAudioContext);
+
+    soundToggle.addEventListener('click', () => {
         const currentlyMuted = audio.muted;
         const newMuted = !currentlyMuted;
-        
         audio.setMute(newMuted);
-        
+
         if (newMuted) {
-            soundOnIcon.classList.add('hidden-icon');
-            soundOffIcon.classList.remove('hidden-icon');
-            muteText.textContent = 'SOUND: OFF';
+            soundOnSvg.classList.add('hidden-icon');
+            soundOffSvg.classList.remove('hidden-icon');
         } else {
-            soundOffIcon.classList.add('hidden-icon');
-            soundOnIcon.classList.remove('hidden-icon');
-            muteText.textContent = 'SOUND: ON';
+            soundOffSvg.classList.add('hidden-icon');
+            soundOnSvg.classList.remove('hidden-icon');
             audio.playSuccess();
         }
     });
 
     // -----------------------------------------------------------------
-    // 4. Cartridge Deck Interface & Slider Listeners
+    // 7. Manual dismissal
     // -----------------------------------------------------------------
-    const slots = document.querySelectorAll('.cartridge-slot');
-    
-    const syncCartridgeActiveUI = (cartridgeName) => {
-        slots.forEach(slot => {
-            if (slot.dataset.cartridge === cartridgeName) {
-                slot.classList.add('active');
-            } else {
-                slot.classList.remove('active');
-            }
-        });
+    const closeInstructionsBtn = document.getElementById('close-instructions-btn');
+    const instructionsCard = document.getElementById('instructions-card');
 
-        // Hide/Show sliders based on active mode
-        const gravityGroup = document.getElementById('slider-gravity-group');
-        const speedGroup = document.getElementById('slider-speed-group');
-        const colorGroup = document.querySelector('.param-color-group');
-
-        if (cartridgeName === 'vortex') {
-            gravityGroup.style.display = 'block';
-            speedGroup.style.display = 'block';
-            colorGroup.style.display = 'flex';
-        } else if (cartridgeName === 'planet') {
-            gravityGroup.style.display = 'none';
-            speedGroup.style.display = 'block';
-            colorGroup.style.display = 'none';
-        } else if (cartridgeName === 'life') {
-            gravityGroup.style.display = 'none'; // Life doesn't have gravity
-            speedGroup.style.display = 'block';
-            colorGroup.style.display = 'none';
-        }
-    };
-
-    slots.forEach(slot => {
-        slot.addEventListener('click', () => {
-            const cartridgeName = slot.dataset.cartridge;
+    if (closeInstructionsBtn) {
+        closeInstructionsBtn.addEventListener('click', () => {
             audio.playClick();
-            glManager.switchCartridge(cartridgeName);
-            syncCartridgeActiveUI(cartridgeName);
-        });
-    });
-
-    // Preset standard values
-    syncCartridgeActiveUI('vortex');
-
-    // Sliders
-    const gravitySlider = document.getElementById('slider-gravity');
-    const speedSlider = document.getElementById('slider-speed');
-
-    gravitySlider.addEventListener('input', (e) => {
-        const val = parseFloat(e.target.value);
-        vortex.params.gravity = val;
-    });
-
-    speedSlider.addEventListener('input', (e) => {
-        const val = parseFloat(e.target.value);
-        vortex.params.speed = val;
-        
-        // Planet rotation speed adjust
-        planet.group.rotation.y = val * 0.1;
-        
-        // Life simulation speed adjust
-        life.updateInterval = 0.3 - (val * 0.1); // higher flow slider = lower interval delay
-    });
-
-    // Color Swappers (Vortex specific)
-    const colorBtns = document.querySelectorAll('.color-btn');
-    colorBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            audio.playClick();
-            colorBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            vortex.setTheme(btn.dataset.theme);
-        });
-    });
-
-    // -----------------------------------------------------------------
-    // 5. Diagnostics Terminal Toggle
-    // -----------------------------------------------------------------
-    const termToggle = document.getElementById('terminal-toggle');
-    const termContainer = document.getElementById('terminal-container');
-    const heroDiagTrigger = document.getElementById('hero-diagnostic-trigger');
-
-    const toggleTerminal = () => {
-        audio.playClick();
-        if (termContainer.style.display === 'none') {
-            termContainer.style.display = 'flex';
-            termContainer.classList.remove('minimized');
-            termContainer.querySelector('.terminal-body .terminal-output').style.display = 'block';
-            termContainer.querySelector('.terminal-body .terminal-input-container').style.display = 'flex';
-            termContainer.querySelector('.terminal-input').focus();
-        } else {
-            termContainer.style.display = 'none';
-        }
-    };
-
-    termToggle.addEventListener('click', toggleTerminal);
-    if (heroDiagTrigger) {
-        heroDiagTrigger.addEventListener('click', (e) => {
-            e.preventDefault();
-            toggleTerminal();
+            instructionsCard.style.opacity = 0;
+            setTimeout(() => {
+                instructionsCard.classList.add('hidden');
+            }, 300);
         });
     }
 
-    // -----------------------------------------------------------------
-    // 6. Section Scroll Snap Hooks (IntersectionObserver)
-    // -----------------------------------------------------------------
-    const sections = document.querySelectorAll('.hero-section, section');
-    const scrollContainer = document.querySelector('.scroll-container');
-    
-    // Header navigation links active mapping
-    const navLinks = document.querySelectorAll('.nav-links a');
-
-    const obsOptions = {
-        root: scrollContainer,
-        threshold: 0.5
-    };
-
-    const sectionObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const sectionId = entry.target.id;
-                
-                // Sound / switch cartridges dynamically based on scroll category
-                if (sectionId === 'hero') {
-                    glManager.switchCartridge('vortex');
-                    syncCartridgeActiveUI('vortex');
-                } else if (sectionId === 'games') {
-                    glManager.switchCartridge('planet');
-                    syncCartridgeActiveUI('planet');
-                } else if (sectionId === 'skills') {
-                    glManager.switchCartridge('life');
-                    syncCartridgeActiveUI('life');
-                }
-
-                // Update navbar states
-                navLinks.forEach(link => {
-                    if (link.getAttribute('href') === `#${sectionId}`) {
-                        link.classList.add('active');
-                    } else {
-                        link.classList.remove('active');
-                    }
-                });
-            }
-        });
-    }, obsOptions);
-
-    sections.forEach(section => {
-        sectionObserver.observe(section);
-    });
-
-    // -----------------------------------------------------------------
-    // 7. Quest Card Hover and Cinematic Focus
-    // -----------------------------------------------------------------
-    const gameCards = document.querySelectorAll('.game-card');
-    
-    gameCards.forEach(card => {
-        card.addEventListener('mouseenter', () => {
-            audio.playHover();
-            companion.setAlert(true);
-            
-            // Focus planet camera to landmark
-            const landmark = card.dataset.landmark;
-            if (glManager.activeCartridge === planet) {
-                planet.focusLandmark(landmark);
-            }
-        });
-
-        card.addEventListener('mouseleave', () => {
-            companion.setAlert(false);
-            
-            if (glManager.activeCartridge === planet) {
-                planet.focusLandmark('reset');
-            }
-        });
-    });
-
-    // -----------------------------------------------------------------
-    // 8. Bind Web Audio Synthesis on Hover/Click of controls
-    // -----------------------------------------------------------------
+    // Add generic hover sounds to HUD links
     const interactiveElements = document.querySelectorAll(
-        'a, button, .cartridge-slot, .color-btn, .game-card, .term-btn, input[type="range"]'
+        'a, button, .hud-nav-item, .dpad-btn, .popup-close-btn'
     );
-
     interactiveElements.forEach(el => {
         el.addEventListener('mouseenter', () => {
             audio.playHover();
         });
-        
-        // Exclude range input so click synth doesn't fire continuously on slide
-        if (el.tagName !== 'INPUT') {
-            el.addEventListener('click', () => {
-                audio.playClick();
-            });
-        }
     });
-
-    // -----------------------------------------------------------------
-    // 9. Mobile Menu Toggle
-    // -----------------------------------------------------------------
-    const mobileBtn = document.querySelector('.mobile-menu-btn');
-    const mobileLinks = document.querySelector('.nav-links');
-
-    if (mobileBtn) {
-        mobileBtn.addEventListener('click', () => {
-            audio.playClick();
-            mobileLinks.classList.toggle('active');
-            mobileBtn.classList.toggle('active');
-        });
-    }
 });

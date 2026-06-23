@@ -4,12 +4,12 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>GamersCraft | Creative Technologist & Game Dev Portfolio</title>
-    <meta name="description" content="Immersive 3D portfolio of Bhanu - Game Developer, Simulations Developer & Creative Technologist. Featuring interactive WebGL sandboxes, gravity particles, retro OS terminal, and procedural worlds.">
+    <title>Bhanu // 3D Rover Sandbox Portfolio</title>
+    <meta name="description" content="Drive a 3D rover around a low-poly playground sandbox to discover projects, skills, and contact transmissions. Inspired by Bruno Simon and Thibault Introvigne.">
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="src/style.css">
 </head>
 
@@ -17,256 +17,138 @@
     <!-- WebGL Background Canvas -->
     <div id="canvas-container"></div>
     
-    <!-- Cyber Scanline and Grid Overlay -->
+    <!-- Retro Scanline Scan Layer -->
     <div class="scanlines"></div>
-    <div class="hud-grid-overlay"></div>
 
-    <div id="app">
-        <!-- Dashboard HUD Overlay (Fixed HUD elements) -->
-        <div class="hud-top-right">
-            <!-- Audio Toggle -->
-            <button id="mute-toggle" class="hud-btn" title="Toggle System Sound">
-                <svg id="sound-on-icon" viewBox="0 0 24 24" width="20" height="20">
+    <!-- HUD Overlay elements -->
+    <div id="game-hud">
+        <!-- Top Navigation Header -->
+        <header id="game-header">
+            <div class="logo">Bhanu <span class="logo-mode">// ROVER_SANDBOX v1.2</span></div>
+            <nav class="hud-nav">
+                <a href="#welcome" class="hud-nav-item" data-target="welcome">WELCOME</a>
+                <a href="#about" class="hud-nav-item" data-target="about">BIO_BOARD</a>
+                <a href="#quests" class="hud-nav-item" data-target="quests">QUESTS</a>
+                <a href="#skills" class="hud-nav-item" data-target="skills">SKILLS</a>
+                <a href="#contact" class="hud-nav-item" data-target="contact">CONTACT_TOWER</a>
+            </nav>
+            <button id="hud-sound-toggle" class="sound-toggle-btn" title="Toggle Game Audio">
+                <svg id="sound-on-svg" viewBox="0 0 24 24" width="18" height="18">
                     <path fill="currentColor" d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18.03,19.86 21,16.28 21,12C21,7.72 18.03,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.77 16.5,12M3,9V15H7L12,20V4L7,9H3Z"/>
                 </svg>
-                <svg id="sound-off-icon" viewBox="0 0 24 24" width="20" height="20" class="hidden-icon">
+                <svg id="sound-off-svg" viewBox="0 0 24 24" width="18" height="18" class="hidden-icon">
                     <path fill="currentColor" d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.44 14,18.7V20.76C15.38,20.44 16.63,19.78 17.68,18.95L20,21.27L21.27,20L4.27,3M19,12C19,12.94 18.8,13.82 18.46,14.64L19.97,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18.03,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.63C16.48,12.43 16.5,12.22 16.5,12Z"/>
                 </svg>
-                <span class="hud-btn-text">SOUND: OFF</span>
             </button>
-
-            <!-- Toggle Terminal Button -->
-            <button id="terminal-toggle" class="hud-btn" title="Toggle Retro Diagnostics Terminal">
-                <svg viewBox="0 0 24 24" width="20" height="20">
-                    <path fill="currentColor" d="M20,19H4A2,2 0 0,1 2,17V7A2,2 0 0,1 4,5H20A2,2 0 0,1 22,7V17A2,2 0 0,1 20,19M4,7V17H20V7H4M6,9H11V11H6V9M6,13H15V15H6V13Z"/>
-                </svg>
-                <span class="hud-btn-text">DIAGNOSTICS</span>
-            </button>
-        </div>
-
-        <!-- Cartridge Slot Deck -->
-        <div id="cartridge-deck" class="hud-panel">
-            <h3 class="panel-header">SIMULATION_RACK</h3>
-            <div class="cartridge-slots">
-                <button class="cartridge-slot active" data-cartridge="vortex">
-                    <span class="slot-led"></span>
-                    <span class="slot-label">01 // GRAVITY_VORTEX</span>
-                </button>
-                <button class="cartridge-slot" data-cartridge="planet">
-                    <span class="slot-led"></span>
-                    <span class="slot-label">02 // PLANET_EXPLORER</span>
-                </button>
-                <button class="cartridge-slot" data-cartridge="life">
-                    <span class="slot-led"></span>
-                    <span class="slot-label">03 // CELLULAR_MATRIX</span>
-                </button>
-            </div>
-            
-            <!-- Parameter Control Panel -->
-            <div id="param-controls" class="panel-body">
-                <div class="param-slider-group" id="slider-gravity-group">
-                    <label for="slider-gravity">Attraction Power</label>
-                    <input type="range" id="slider-gravity" min="0.5" max="3.0" step="0.1" value="1.5" class="cyber-slider">
-                </div>
-                <div class="param-slider-group" id="slider-speed-group">
-                    <label for="slider-speed">Simulation Flow</label>
-                    <input type="range" id="slider-speed" min="0.2" max="2.0" step="0.1" value="1.0" class="cyber-slider">
-                </div>
-                <div class="param-color-group">
-                    <span class="param-label">Color Shift</span>
-                    <div class="color-options">
-                        <button class="color-btn active" data-theme="cyan" style="background: #00f0ff;"></button>
-                        <button class="color-btn" data-theme="pink" style="background: #ff0055;"></button>
-                        <button class="color-btn" data-theme="gold" style="background: #ffb700;"></button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Draggable Subsystem Diagnostics Terminal -->
-        <div id="terminal-container" class="terminal-window"></div>
-
-        <!-- Header -->
-        <header id="header">
-            <nav>
-                <div class="logo">Bhanu <span class="logo-accent">// GamersCraft</span></div>
-                <ul class="nav-links">
-                    <li><a href="#hero" class="nav-link-item">Home</a></li>
-                    <li><a href="#about" class="nav-link-item">Profile</a></li>
-                    <li><a href="#games" class="nav-link-item">Quests</a></li>
-                    <li><a href="#skills" class="nav-link-item">Skill Tree</a></li>
-                    <li><a href="#contact" class="nav-link-item">Start Game</a></li>
-                </ul>
-                <div class="mobile-menu-btn">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </div>
-            </nav>
         </header>
 
-        <!-- Scrolling Content (Transparent Panels Overlaying WebGL Background) -->
-        <main class="scroll-container">
-            <!-- Hero Section -->
-            <section id="hero" class="hero-section">
-                <div class="hero-content">
-                    <div class="status-badge">SYSTEM STATUS: OPERATIONAL</div>
-                    <h1 class="glitch" data-text="SIMULATE REALITY">SIMULATE REALITY</h1>
-                    <p class="tagline">Creative Technologist // Game Developer // Simulation Designer</p>
-                    <div class="hero-buttons">
-                        <a href="#games" class="cta-button">Enter Quests</a>
-                        <a href="#" id="hero-diagnostic-trigger" class="cta-button secondary">Boot Diagnostics</a>
-                    </div>
-                </div>
-                <div class="scroll-indicator">
-                    <span></span>
-                </div>
-            </section>
+        <!-- Dynamic Information Popup Panel -->
+        <div id="info-overlay" class="hud-popup-card hidden">
+            <button class="popup-close-btn" id="popup-close">×</button>
+            <div id="popup-content">
+                <!-- Injected dynamically via main.js -->
+            </div>
+        </div>
 
-            <!-- Profile Section -->
-            <section id="about" class="section">
-                <div class="container glass-card">
-                    <h2 class="section-title">Player_1 // Status</h2>
-                    <div class="about-content">
-                        <div class="about-text">
-                            <p class="cyber-desc">I construct games, physical math simulations, and high-performance WebGL modules. Blending technical engineering principles with rich design aesthetics is what drives me.</p>
-                            <p class="cyber-desc">I specialize in creating fluid sandboxes, procedural mesh generations, and low-overhead client experiences. Every pixel and vertex in this canvas is computed mathematically without texture downloads.</p>
-                        </div>
-                        <div class="about-stats">
-                            <div class="stat-item">
-                                <span class="stat-number">5+</span>
-                                <span class="stat-label">Years Code XP</span>
-                            </div>
-                            <div class="stat-item">
-                                <span class="stat-number">10+</span>
-                                <span class="stat-label">Interactive Builds</span>
-                            </div>
-                            <div class="stat-item">
-                                <span class="stat-number">60</span>
-                                <span class="stat-label">WebGL Target FPS</span>
-                            </div>
-                        </div>
-                    </div>
+        <!-- How To Play Overlay (Instructions Widget) -->
+        <div id="instructions-card" class="hud-instructions">
+            <h3>ROVER MANUAL</h3>
+            <div class="controls-list">
+                <div class="control-row">
+                    <span class="control-key">W</span> <span class="control-key">S</span> / <span class="control-key">↑</span> <span class="control-key">↓</span>
+                    <span class="control-desc">Accelerate / Reverse</span>
                 </div>
-            </section>
+                <div class="control-row">
+                    <span class="control-key">A</span> <span class="control-key">D</span> / <span class="control-key">←</span> <span class="control-key">→</span>
+                    <span class="control-desc">Steering Turn</span>
+                </div>
+            </div>
+            <ul class="manual-tips">
+                <li>Drive up the wooden ramp to jump</li>
+                <li>Crash into stacked gold crates to scatter them</li>
+                <li>Drive through project arches to unlock quest logs</li>
+                <li>Drive to satellite tower (back) to start transmission</li>
+            </ul>
+            <button id="close-instructions-btn" class="manual-close-btn">DISMISS</button>
+        </div>
 
-            <!-- Games Section -->
-            <section id="games" class="section">
-                <div class="container glass-card">
-                    <h2 class="section-title">Selected Quests // Projects</h2>
-                    <div class="games-grid">
-                        <!-- Game Card 1 -->
-                        <div class="game-card" data-landmark="neon">
-                            <div class="game-image-overlay" style="border-bottom: 2px solid #54b334;"></div>
-                            <div class="game-info">
-                                <span class="game-code">QUEST_01 // SPEED</span>
-                                <h3>Neon Racer</h3>
-                                <p>High-speed cyberpunk hover racing game with procedural tracks and custom ship mechanics built in Unity.</p>
-                                <div class="tags">
-                                    <span>Unity</span>
-                                    <span>C#</span>
-                                    <span>PhysX</span>
-                                </div>
-                                <a href="https://github.com" class="play-link">Inspect Code</a>
-                            </div>
-                        </div>
-                        
-                        <!-- Game Card 2 -->
-                        <div class="game-card" data-landmark="void">
-                            <div class="game-image-overlay" style="border-bottom: 2px solid #ff0055;"></div>
-                            <div class="game-info">
-                                <span class="game-code">QUEST_02 // SPACE</span>
-                                <h3>Void Walker</h3>
-                                <p>Atmospheric dimension platformer utilizing gravity shifting mechanisms and particle-field spatial warps.</p>
-                                <div class="tags">
-                                    <span>Godot</span>
-                                    <span>GDScript</span>
-                                    <span>Shaders</span>
-                                </div>
-                                <a href="https://github.com" class="play-link">Inspect Code</a>
-                            </div>
-                        </div>
-                        
-                        <!-- Game Card 3 -->
-                        <div class="game-card" data-landmark="defense">
-                            <div class="game-image-overlay" style="border-bottom: 2px solid #00f0ff;"></div>
-                            <div class="game-info">
-                                <span class="game-code">QUEST_03 // TACTICAL</span>
-                                <h3>Cyber Defense</h3>
-                                <p>Mainframe-styled security grid simulation using volumetric line renderers and AI pathfinding networks.</p>
-                                <div class="tags">
-                                    <span>Unreal 5</span>
-                                    <span>C++</span>
-                                    <span>Systems</span>
-                                </div>
-                                <a href="https://github.com" class="play-link">Inspect Code</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
+        <!-- Trigger Zone Status Indicator (Bottom Center HUD) -->
+        <div id="hud-zone-indicator" class="hud-status-indicator hidden">
+            <span class="indicator-led pulsing"></span>
+            <span id="indicator-text">APPROACHING PROJECT GATEWAY...</span>
+        </div>
 
-            <!-- Skills Section -->
-            <section id="skills" class="section">
-                <div class="container glass-card">
-                    <h2 class="section-title">Core Node Skills // Tree</h2>
-                    <div class="skills-wrapper">
-                        <div class="skill-category">
-                            <h3>01 // Core Engines</h3>
-                            <ul class="skill-list">
-                                <li>Unity Engine (C# scripting)</li>
-                                <li>Unreal Engine 5 (C++ / Blueprints)</li>
-                                <li>Godot (GDScript / Physics)</li>
-                            </ul>
-                        </div>
-                        <div class="skill-category">
-                            <h3>02 // Languages</h3>
-                            <ul class="skill-list">
-                                <li>C++ / C# / Python</li>
-                                <li>HTML5 / CSS3 / JavaScript</li>
-                                <li>GLSL Shaders & Vector Math</li>
-                            </ul>
-                        </div>
-                        <div class="skill-category">
-                            <h3>03 // Graphics Toolsets</h3>
-                            <ul class="skill-list">
-                                <li>Three.js / WebGL / Canvas</li>
-                                <li>Procedural mesh generation</li>
-                                <li>Blender & Low-poly Assets</li>
-                            </ul>
-                        </div>
-                    </div>
+        <!-- Mobile Touch Controls overlay (D-Pad layout) -->
+        <div id="mobile-dpad" class="mobile-controls-container">
+            <div class="dpad-column">
+                <button id="mobile-steer-left" class="dpad-btn steer-btn">◀</button>
+                <div class="dpad-drive-group">
+                    <button id="mobile-drive-up" class="dpad-btn drive-btn">▲</button>
+                    <button id="mobile-drive-down" class="dpad-btn drive-btn">▼</button>
                 </div>
-            </section>
-
-            <!-- Contact Section -->
-            <section id="contact" class="section">
-                <div class="container glass-card">
-                    <h2 class="section-title">Initiate Transmission // Link</h2>
-                    <div class="contact-content">
-                        <p class="cyber-desc">Establishing a communication socket. Ready to take on projects in graphics development, game engines, and immersive dashboards.</p>
-                        <a href="mailto:hello@gamerscraft.com" class="cta-button glow-accent">START TRANSMISSION</a>
-                        
-                        <div class="social-links">
-                            <a href="https://github.com" target="_blank" class="social-item">GitHub</a>
-                            <a href="https://linkedin.com" target="_blank" class="social-item">LinkedIn</a>
-                            <a href="https://twitter.com" target="_blank" class="social-item">Twitter</a>
-                            <a href="https://itch.io" target="_blank" class="social-item">Itch.io</a>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <footer>
-                <div class="footer-hud">
-                    <span>CORES: ONLINE</span>
-                    <span>SECURE SOCKET // SHIELD: ACTIVE</span>
-                    <span>© 2026 Bhanu. Crafted procedurally.</span>
-                </div>
-            </footer>
-        </main>
+                <button id="mobile-steer-right" class="dpad-btn steer-btn">▶</button>
+            </div>
+        </div>
     </div>
-    
+
+    <!-- Hidden elements for dynamic overlay content formatting -->
+    <div id="project-templates" class="hidden">
+        <!-- Neon Racer template -->
+        <div id="template-neon">
+            <span class="popup-badge text-green">QUEST // PERFORMANCE</span>
+            <h2>Neon Racer</h2>
+            <p>An adrenaline-fueled cyberpunk racing simulation. Programmed custom hover thruster physics, procedural track generation meshes, and responsive vector math in Unity Engine.</p>
+            <div class="popup-tags">
+                <span class="tag">Unity</span>
+                <span class="tag">C# Scripting</span>
+                <span class="tag">PhysX</span>
+                <span class="tag">Procedural Gen</span>
+            </div>
+            <a href="https://github.com" target="_blank" class="popup-link-btn border-green">Inspect Git Repository</a>
+        </div>
+
+        <!-- Void Walker template -->
+        <div id="template-void">
+            <span class="popup-badge text-pink">QUEST // MECHANICS</span>
+            <h2>Void Walker</h2>
+            <p>An atmospheric platformer exploring dimension shifting. Implemented a robust 2D physics parser, gravitational vector shifts, and custom shader displacement fields in Godot.</p>
+            <div class="popup-tags">
+                <span class="tag">Godot</span>
+                <span class="tag">GDScript</span>
+                <span class="tag">Vector Physics</span>
+                <span class="tag">Shaders</span>
+            </div>
+            <a href="https://github.com" target="_blank" class="popup-link-btn border-pink">Inspect Git Repository</a>
+        </div>
+
+        <!-- Cyber Defense template -->
+        <div id="template-defense">
+            <span class="popup-badge text-cyan">QUEST // SYSTEMS</span>
+            <h2>Cyber Defense</h2>
+            <p>A procedural tactical mainframe defense game. Architected custom pathfinding grids, optimized volumetric laser beam rendering, and multi-threaded AI agent waves in Unreal 5.</p>
+            <div class="popup-tags">
+                <span class="tag">Unreal Engine 5</span>
+                <span class="tag">C++ Cores</span>
+                <span class="tag">AI Systems</span>
+                <span class="tag">Shader Graphs</span>
+            </div>
+            <a href="https://github.com" target="_blank" class="popup-link-btn border-cyan">Inspect Git Repository</a>
+        </div>
+
+        <!-- Contact form template -->
+        <div id="template-contact">
+            <span class="popup-badge text-cyan">TRANSMISSION SOCKET</span>
+            <h2>Initiate Link</h2>
+            <p>Ready to collaborate on physics simulations, WebGL rendering architectures, or engine development. Drop a message to establish connection.</p>
+            <a href="mailto:hello@gamerscraft.com" class="popup-link-btn border-cyan glow-cyan" style="margin-bottom: 15px;">START TRANSMISSION</a>
+            <div class="popup-socials">
+                <a href="https://github.com" target="_blank">GITHUB</a>
+                <a href="https://linkedin.com" target="_blank">LINKEDIN</a>
+                <a href="https://twitter.com" target="_blank">TWITTER</a>
+            </div>
+        </div>
+    </div>
+
     <script type="module" src="src/main.js"></script>
 </body>
 

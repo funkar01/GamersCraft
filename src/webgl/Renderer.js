@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { Rover } from './Rover.js';
+import { Playground } from './Playground.js';
 
 export class WebGLRendererManager {
     constructor(canvasContainerId) {
@@ -8,67 +10,96 @@ export class WebGLRendererManager {
         this.scene = null;
         this.camera = null;
         this.renderer = null;
-        this.activeCartridge = null;
-        this.cartridges = {};
-        this.companion = null;
-        
-        this.mouse = new THREE.Vector2(0, 0);
-        this.targetMouse = new THREE.Vector2(0, 0);
         this.clock = new THREE.Clock();
+
+        // Game Entities
+        this.rover = null;
+        this.playground = null;
+
+        // Camera Follow helpers
+        this.currentLookTarget = new THREE.Vector3(0, 0.6, 0);
         
+        // Input state passed from main.js
+        this.keys = {};
+
         this.init();
     }
 
     init() {
-        // Setup Scene
+        // --- 1. Scene Setup ---
         this.scene = new THREE.Scene();
-        this.scene.fog = new THREE.FogExp2(0x0a0a0c, 0.015);
+        this.scene.background = new THREE.Color(0x0a0a0c);
+        this.scene.fog = new THREE.FogExp2(0x0a0a0c, 0.018);
 
-        // Setup Camera
+        // --- 2. Camera Setup ---
         this.camera = new THREE.PerspectiveCamera(
-            60,
+            50,
             this.container.clientWidth / this.container.clientHeight,
             0.1,
             1000
         );
-        this.camera.position.set(0, 0, 30);
+        
+        // Spawn camera slightly behind target
+        this.camera.position.set(0, 8, -12);
 
-        // Setup WebGLRenderer
-        this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        // --- 3. Renderer Setup ---
+        this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        this.renderer.setClearColor(0x0a0a0c, 1);
         
-        // Shadow mapping for planet mode
+        // Setup shadow maps for realistic game feel
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         
         this.container.appendChild(this.renderer.domElement);
 
-        // Lights
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.15);
+        // --- 4. Lights ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
         this.scene.add(ambientLight);
 
-        const dirLight = new THREE.DirectionalLight(0x00f0ff, 1.2);
-        dirLight.position.set(10, 20, 15);
-        dirLight.castShadow = true;
-        dirLight.shadow.mapSize.width = 1024;
-        dirLight.shadow.mapSize.height = 1024;
-        this.scene.add(dirLight);
+        // Sun light that casts shadows
+        const sunLight = new THREE.DirectionalLight(0x00f0ff, 1.5); // Cyan tint
+        sunLight.position.set(30, 45, 20);
+        sunLight.castShadow = true;
+        
+        // Soft shadow map resolution
+        sunLight.shadow.mapSize.width = 2048;
+        sunLight.shadow.mapSize.height = 2048;
+        sunLight.shadow.camera.near = 0.5;
+        sunLight.shadow.camera.far = 150;
+        
+        // Orgraphic bounds for directional shadow camera
+        const d = 50;
+        sunLight.shadow.camera.left = -d;
+        sunLight.shadow.camera.right = d;
+        sunLight.shadow.camera.top = d;
+        sunLight.shadow.camera.bottom = -d;
+        
+        this.scene.add(sunLight);
 
-        const pointLight = new THREE.PointLight(0xff0055, 1.5, 50);
-        pointLight.position.set(-10, -10, 10);
-        this.scene.add(pointLight);
+        // Warm secondary light
+        const fillLight = new THREE.DirectionalLight(0xff0055, 0.6); // Pink tint
+        fillLight.position.set(-30, 20, -20);
+        this.scene.add(fillLight);
 
-        // Listeners
+        // --- 5. Spawn Entities ---
+        // 5a. Ground Playground Map
+        this.playground = new Playground();
+        this.scene.add(this.playground.group);
+
+        // 5b. Physics Rover
+        this.rover = new Rover();
+        this.scene.add(this.rover.mesh);
+
+        // --- 6. Resize Listener ---
         window.addEventListener('resize', () => this.handleResize());
-        window.addEventListener('mousemove', (e) => this.handleMouseMove(e));
 
-        // Start Loop
+        // --- 7. Start Loop ---
         this.tick();
     }
 
     handleResize() {
+        if (!this.container) return;
         const width = this.container.clientWidth;
         const height = this.container.clientHeight;
 
@@ -79,69 +110,46 @@ export class WebGLRendererManager {
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     }
 
-    handleMouseMove(e) {
-        // Normalize mouse coordinates (-1 to 1)
-        this.targetMouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-        this.targetMouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-    }
-
-    registerCartridge(name, cartridgeInstance) {
-        this.cartridges[name] = cartridgeInstance;
-        // Bind manager context
-        cartridgeInstance.manager = this;
-    }
-
-    registerCompanion(companionInstance) {
-        this.companion = companionInstance;
-        this.companion.manager = this;
-        this.scene.add(this.companion.mesh);
-    }
-
-    async switchCartridge(name) {
-        if (!this.cartridges[name]) return;
-        
-        const oldCartridge = this.activeCartridge;
-        const newCartridge = this.cartridges[name];
-        
-        // Transition animation out
-        if (oldCartridge) {
-            await oldCartridge.transitionOut();
-            this.scene.remove(oldCartridge.group);
-        }
-        
-        this.activeCartridge = newCartridge;
-        this.scene.add(newCartridge.group);
-        
-        // Reset camera positions depending on mode
-        if (name === 'planet') {
-            this.camera.position.set(0, 15, 25);
-            this.camera.lookAt(0, 0, 0);
-        } else {
-            this.camera.position.set(0, 0, 30);
-            this.camera.lookAt(0, 0, 0);
-        }
-        
-        await newCartridge.transitionIn();
-    }
-
     tick() {
         requestAnimationFrame(() => this.tick());
 
-        const delta = this.clock.getDelta();
+        const delta = Math.min(this.clock.getDelta(), 0.1); // Clamp delta to avoid physics explosion
         const time = this.clock.getElapsedTime();
 
-        // Smooth mouse movement (lerp)
-        this.mouse.x += (this.targetMouse.x - this.mouse.x) * 0.1;
-        this.mouse.y += (this.targetMouse.y - this.mouse.y) * 0.1;
-
-        // Update active cartridge
-        if (this.activeCartridge) {
-            this.activeCartridge.update(delta, time, this.mouse);
+        // Update physics
+        if (this.rover) {
+            this.rover.update(delta, this.keys, this.playground);
         }
 
-        // Update companion
-        if (this.companion) {
-            this.companion.update(delta, time, this.mouse);
+        // Update playground dynamic obstacles/crates
+        if (this.playground) {
+            this.playground.update(delta, time, this.rover);
+        }
+
+        // --- Camera Spring-Follow Physics Logic ---
+        if (this.rover) {
+            // Target offset behind the rover heading
+            // x: 0, y: 4.8 units above, z: -9 units behind local heading
+            const offset = new THREE.Vector3(0, 4.8, -9.0);
+            
+            // Rotate offset to match rover's current rotation angle
+            offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.rover.rotationY);
+            
+            // Ideal camera coordinate target in world space
+            const targetCamPos = this.rover.position.clone().add(offset);
+            
+            // Smoothly interpolate (lerp) camera position
+            this.camera.position.lerp(targetCamPos, 0.08);
+
+            // Point camera slightly in front of the rover
+            const lookTarget = this.rover.position.clone();
+            const lookAhead = new THREE.Vector3(0, 0.5, 2.5);
+            lookAhead.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.rover.rotationY);
+            lookTarget.add(lookAhead);
+
+            // Smoothly lerp lookAt coordinate
+            this.currentLookTarget.lerp(lookTarget, 0.1);
+            this.camera.lookAt(this.currentLookTarget);
         }
 
         this.renderer.render(this.scene, this.camera);
