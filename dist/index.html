@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
-  <script type="module" crossorigin src="/assets/index-B3lBKYe5.js"></script>
+  <script type="module" crossorigin src="/assets/index-D26OhqDw.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-Bv9py87x.css">
 </head>
 
@@ -101,6 +101,22 @@
 
     <!-- Hidden elements for dynamic overlay content formatting -->
     <div id="project-templates" class="hidden">
+        <!-- Portal Showcase template -->
+        <div id="template-portal">
+            <span class="popup-badge text-cyan">PORTAL DIODE // PROJECT SCANNER</span>
+            
+            <div id="portal-project-details" style="margin-top: 15px;">
+                <!-- Injected dynamically via main.js -->
+            </div>
+            
+            <!-- Navigation Controls -->
+            <div class="portal-controls" style="display: flex; justify-content: space-between; align-items: center; margin-top: 25px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 15px;">
+                <button id="portal-prev-btn" class="popup-link-btn border-cyan" style="width: 38%; margin: 0; padding: 8px; font-size: 0.6rem;">◀ PREV</button>
+                <div id="portal-project-indicator" style="font-family: var(--font-heading); font-size: 0.75rem; font-weight: 700; color: var(--color-cyan);">1 / 3</div>
+                <button id="portal-next-btn" class="popup-link-btn border-cyan" style="width: 38%; margin: 0; padding: 8px; font-size: 0.6rem;">NEXT ▶</button>
+            </div>
+        </div>
+
         <!-- Neon Racer template -->
         <div id="template-neon">
             <span class="popup-badge text-green">MONOLITH // NEON RACER</span>

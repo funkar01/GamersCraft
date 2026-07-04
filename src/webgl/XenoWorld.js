@@ -15,6 +15,13 @@ export class XenoWorld {
         this.treeLights = [];
         this.runicRings = [];
         this.flowerLights = [];
+
+        // Project Showcase Portal assets
+        this.portalDebris = [];
+        this.portalRingMat = null;
+        this.portalCoreMat = null;
+        this.portalInnerCoreMat = null;
+        this.portalLight = null;
         
         // Grass InstancedMesh parameters
         this.grassMesh = null;
@@ -551,10 +558,8 @@ export class XenoWorld {
             18, 18, 8, 5, 0x54b334
         );
 
-        // --- 12. Runic Obsidian Monoliths ---
-        this.createObsidianMonolith("neon", -16, -32, 0x54b334);
-        this.createObsidianMonolith("void", 0, -32, 0xff0055);
-        this.createObsidianMonolith("defense", 16, -32, 0x00f0ff);
+        // --- 12. Futuristic Project Portal Screen ---
+        this.projectPortal = this.createProjectPortal(0, -32);
 
         // --- 13. Transmission Radar Spire ---
         const beacon = new THREE.Group();
@@ -744,101 +749,137 @@ export class XenoWorld {
         this.group.add(signGroup);
     }
 
-    createObsidianMonolith(name, x, z, colorHex) {
-        const monolithGroup = new THREE.Group();
+    createProjectPortal(x, z) {
+        const portalGroup = new THREE.Group();
         const gy = getTerrainHeight(x, z);
 
-        // 1. Column - Pentagonal low-poly obsidian column
-        const colGeom = new THREE.CylinderGeometry(0.7, 0.9, 5.0, 5);
-        const colMat = new THREE.MeshStandardMaterial({
-            color: 0x07070a,
-            roughness: 0.15,
-            metalness: 0.9,
+        // 1. Portal base circular platform
+        const baseMat = new THREE.MeshStandardMaterial({
+            color: 0x181824,
+            roughness: 0.85,
+            metalness: 0.2,
             flatShading: true
         });
-        const column = new THREE.Mesh(colGeom, colMat);
-        column.position.y = 2.5;
-        column.castShadow = true;
-        column.receiveShadow = true;
-        monolithGroup.add(column);
+        const basePlatform = new THREE.Mesh(
+            new THREE.CylinderGeometry(5.2, 5.8, 0.5, 8),
+            baseMat
+        );
+        basePlatform.position.y = 0.25;
+        basePlatform.receiveShadow = true;
+        basePlatform.castShadow = true;
+        portalGroup.add(basePlatform);
 
-        // 2. Glowing Runic Engravings (Neon strips on the column)
-        const stripGeom = new THREE.BoxGeometry(0.12, 3.8, 0.12);
-        const stripMat = new THREE.MeshBasicMaterial({ color: colorHex });
+        // 2. Portal outer stone pillars framing the ring (arch arrangement)
+        const stoneMat = new THREE.MeshStandardMaterial({
+            color: 0x07070a, // Obsidian rock
+            roughness: 0.2,
+            metalness: 0.8,
+            flatShading: true
+        });
         
-        for (let i = 0; i < 5; i++) {
-            const angle = (i / 5) * Math.PI * 2;
-            const strip = new THREE.Mesh(stripGeom, stripMat);
-            strip.position.set(Math.cos(angle) * 0.78, 2.5, Math.sin(angle) * 0.78);
-            strip.rotation.y = -angle;
-            monolithGroup.add(strip);
+        const pillarCount = 8;
+        const radius = 4.2;
+        for (let i = 0; i < pillarCount; i++) {
+            const angle = (i / pillarCount) * Math.PI; // semi-circle arch framing the top
+            const px = Math.cos(angle) * radius;
+            const py = Math.sin(angle) * radius + 0.5;
+            
+            const colGeom = new THREE.CylinderGeometry(0.35, 0.5, 1.8 + Math.random() * 0.6, 5);
+            const pillar = new THREE.Mesh(colGeom, stoneMat);
+            pillar.position.set(px, py, 0);
+            // tilt them to look like a circular arch
+            pillar.rotation.z = -angle + Math.PI / 2;
+            pillar.castShadow = true;
+            pillar.receiveShadow = true;
+            portalGroup.add(pillar);
         }
 
-        // 3. Holographic Text Plate (Project Name)
-        const canvas = document.createElement('canvas');
-        canvas.width = 256;
-        canvas.height = 64;
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#050508';
-        ctx.fillRect(0, 0, 256, 64);
-        
-        ctx.strokeStyle = `#${colorHex.toString(16).padStart(6, '0')}`;
-        ctx.lineWidth = 4;
-        ctx.strokeRect(2, 2, 252, 60);
+        // 3. Floating debris particles orbiting the portal (like the 1st reference image)
+        this.portalDebris = [];
+        const debrisGeom = new THREE.DodecahedronGeometry(0.24, 0);
+        for (let i = 0; i < 12; i++) {
+            const debris = new THREE.Mesh(debrisGeom, stoneMat);
+            const angle = (i / 12) * Math.PI * 2;
+            const dist = 5.2 + Math.random() * 1.5;
+            debris.position.set(
+                Math.cos(angle) * dist,
+                3.0 + (Math.random() - 0.5) * 3.5,
+                (Math.random() - 0.5) * 2.0
+            );
+            debris.castShadow = true;
+            portalGroup.add(debris);
+            
+            this.portalDebris.push({
+                mesh: debris,
+                angle: angle,
+                radius: dist,
+                speed: 0.8 + Math.random() * 0.8,
+                yOffset: debris.position.y
+            });
+        }
 
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 20px Courier New';
-        ctx.textAlign = 'center';
-        ctx.fillText(name.toUpperCase(), 128, 38);
-
-        const textTexture = new THREE.CanvasTexture(canvas);
-        const textPlate = new THREE.Mesh(
-            new THREE.PlaneGeometry(2.0, 0.5),
-            new THREE.MeshBasicMaterial({ map: textTexture, side: THREE.DoubleSide })
-        );
-        textPlate.position.set(0, 4.0, 1.05);
-        monolithGroup.add(textPlate);
-
-        // 4. Floating Runic Ring above monolith
-        const ringGeom = new THREE.TorusGeometry(1.0, 0.08, 6, 20);
-        ringGeom.rotateX(Math.PI / 2);
-        const ringMat = new THREE.MeshBasicMaterial({
-            color: colorHex,
+        // 4. Portal Inner Swirling Screen (Core Ring)
+        const ringGeom = new THREE.TorusGeometry(3.6, 0.25, 8, 32);
+        this.portalRingMat = new THREE.MeshBasicMaterial({
+            color: 0x39ff14, // Vibrant green default
             transparent: true,
-            opacity: 0.8
+            opacity: 0.85,
+            blending: THREE.AdditiveBlending
         });
-        const ring = new THREE.Mesh(ringGeom, ringMat);
-        ring.position.set(0, 6.8, 0);
-        monolithGroup.add(ring);
-        
-        this.runicRings.push(ring);
+        const portalRing = new THREE.Mesh(ringGeom, this.portalRingMat);
+        portalRing.position.set(0, 3.8, 0);
+        portalGroup.add(portalRing);
 
-        // 5. Zone Area Ring on the ground
-        const zoneRingGeom = new THREE.RingGeometry(2.3, 2.5, 32);
-        zoneRingGeom.rotateX(-Math.PI / 2);
-        const zoneRingMat = new THREE.MeshBasicMaterial({
-            color: colorHex,
+        // 5. Portal Center whirlpool/swirl screen mesh
+        const coreGeom = new THREE.CircleGeometry(3.4, 32);
+        this.portalCoreMat = new THREE.MeshBasicMaterial({
+            color: 0x39ff14,
             transparent: true,
-            opacity: 0.4,
-            side: THREE.DoubleSide
+            opacity: 0.65,
+            side: THREE.DoubleSide,
+            blending: THREE.AdditiveBlending
         });
-        const zoneRing = new THREE.Mesh(zoneRingGeom, zoneRingMat);
-        zoneRing.position.set(0, 0.05, 0);
-        monolithGroup.add(zoneRing);
+        this.portalCore = new THREE.Mesh(coreGeom, this.portalCoreMat);
+        this.portalCore.position.set(0, 3.8, 0.05); // slightly offset
+        portalGroup.add(this.portalCore);
 
-        // 6. PointLight for bioluminescent ground casting
-        const light = new THREE.PointLight(colorHex, 1.8, 8, 1.5);
-        light.position.set(0, 1.0, 0);
-        monolithGroup.add(light);
+        // Secondary inner swirl circle for visual depth
+        const innerCoreGeom = new THREE.CircleGeometry(2.4, 32);
+        this.portalInnerCoreMat = new THREE.MeshBasicMaterial({
+            color: 0x00ffaa,
+            transparent: true,
+            opacity: 0.8,
+            side: THREE.DoubleSide,
+            blending: THREE.AdditiveBlending
+        });
+        this.portalInnerCore = new THREE.Mesh(innerCoreGeom, this.portalInnerCoreMat);
+        this.portalInnerCore.position.set(0, 3.8, 0.1); 
+        portalGroup.add(this.portalInnerCore);
 
-        monolithGroup.position.set(x, gy, z);
-        this.group.add(monolithGroup);
+        // 6. Dynamic PointLight inside the portal screen
+        this.portalLight = new THREE.PointLight(0x39ff14, 3.0, 15, 1.2);
+        this.portalLight.position.set(0, 3.8, 0.5);
+        portalGroup.add(this.portalLight);
 
+        portalGroup.position.set(x, gy, z);
+        this.group.add(portalGroup);
+
+        // Register the project zone representing the portal
         this.projectZones.push({
-            name: name,
+            name: 'portal',
             center: new THREE.Vector3(x, gy, z),
-            radius: 2.6
+            radius: 4.8
         });
+    }
+
+    setPortalColor(colorHex) {
+        if (this.portalRingMat) this.portalRingMat.color.setHex(colorHex);
+        if (this.portalCoreMat) this.portalCoreMat.color.setHex(colorHex);
+        if (this.portalInnerCoreMat) {
+            const innerColor = new THREE.Color(colorHex).addScalar(0.1);
+            this.portalInnerCoreMat.color.copy(innerColor);
+        }
+        if (this.portalLight) this.portalLight.color.setHex(colorHex);
     }
 
     createInstancedGrass() {
@@ -1180,6 +1221,24 @@ export class XenoWorld {
             }
 
             this.onEnterZone(activeZone);
+        }
+
+        // --- 5. Animate Project Showcase Portal Screen (Swirl & Orbiting Debris) ---
+        if (this.portalCore) {
+            this.portalCore.rotation.z = time * 0.8;
+        }
+        if (this.portalInnerCore) {
+            this.portalInnerCore.rotation.z = -time * 1.6;
+        }
+        if (this.portalDebris) {
+            this.portalDebris.forEach(d => {
+                d.angle += d.speed * delta;
+                d.mesh.position.x = Math.cos(d.angle) * d.radius;
+                d.mesh.position.z = Math.sin(d.angle) * d.radius;
+                d.mesh.position.y = d.yOffset + Math.sin(time * 2.0 + d.angle) * 0.15;
+                d.mesh.rotation.x += delta;
+                d.mesh.rotation.y += delta * 0.5;
+            });
         }
     }
 }

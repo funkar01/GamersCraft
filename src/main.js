@@ -76,6 +76,65 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentActiveZone = null;
     let openedByZone = false;
 
+    // Project Portal Showcase state and handlers
+    let currentPortalProjectIndex = 0;
+    const portalProjectList = ['neon', 'void', 'defense'];
+    const portalProjectColors = [0x39ff14, 0xff00ff, 0x00f0ff]; // green, pink, cyan
+
+    function updatePortalProjectDisplay() {
+        const detailsContainer = document.getElementById('portal-project-details');
+        const indicator = document.getElementById('portal-project-indicator');
+        
+        if (!detailsContainer) return;
+
+        const activeName = portalProjectList[currentPortalProjectIndex];
+        const template = templates.querySelector(`#template-${activeName}`);
+        if (template) {
+            detailsContainer.innerHTML = template.innerHTML;
+            const badge = detailsContainer.querySelector('.popup-badge');
+            if (badge) badge.remove(); // remove sub-badge to avoid text repetition
+        }
+
+        if (indicator) {
+            indicator.textContent = `${currentPortalProjectIndex + 1} / 3`;
+            const colors = ['#39ff14', '#ff00ff', '#00f0ff'];
+            indicator.style.color = colors[currentPortalProjectIndex];
+        }
+
+        // Dynamically change portal glow colors in WebGL space
+        if (glManager.playground && typeof glManager.playground.setPortalColor === 'function') {
+            glManager.playground.setPortalColor(portalProjectColors[currentPortalProjectIndex]);
+        }
+
+        // Sync HUD indicator bar status text and color
+        const colors = ['#39ff14', '#ff00ff', '#00f0ff'];
+        if (indicatorText) {
+            indicatorText.textContent = `PORTAL SYNC: EXHIBITING ${activeName.toUpperCase()} PROJECT FRAMEWORK...`;
+            indicatorText.style.color = colors[currentPortalProjectIndex];
+            
+            // Sync LED color indicator if it exists
+            const led = zoneIndicator.querySelector('.indicator-led');
+            if (led) {
+                led.style.background = colors[currentPortalProjectIndex];
+                led.style.boxShadow = `0 0 8px ${colors[currentPortalProjectIndex]}`;
+            }
+        }
+    }
+
+    // Event delegation for portal prev/next navigation buttons
+    document.addEventListener('click', (e) => {
+        if (e.target && e.target.id === 'portal-prev-btn') {
+            audio.playClick();
+            currentPortalProjectIndex = (currentPortalProjectIndex - 1 + portalProjectList.length) % portalProjectList.length;
+            updatePortalProjectDisplay();
+        }
+        if (e.target && e.target.id === 'portal-next-btn') {
+            audio.playClick();
+            currentPortalProjectIndex = (currentPortalProjectIndex + 1) % portalProjectList.length;
+            updatePortalProjectDisplay();
+        }
+    });
+
     // Monitor playground collision zones
     glManager.playground.onEnterZone = (zone) => {
         if (zone) {
@@ -94,11 +153,20 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Inject correct template
             if (zone.type === 'project') {
-                indicatorText.textContent = `MONOLITH SYNC: ENCODING ${zone.name.toUpperCase()} DATAFRAMES...`;
-                const template = templates.querySelector(`#template-${zone.name}`);
-                if (template) {
-                    popupContent.innerHTML = template.innerHTML;
-                    infoOverlay.classList.remove('hidden');
+                if (zone.name === 'portal') {
+                    const template = templates.querySelector('#template-portal');
+                    if (template) {
+                        popupContent.innerHTML = template.innerHTML;
+                        infoOverlay.classList.remove('hidden');
+                        updatePortalProjectDisplay();
+                    }
+                } else {
+                    indicatorText.textContent = `MONOLITH SYNC: ENCODING ${zone.name.toUpperCase()} DATAFRAMES...`;
+                    const template = templates.querySelector(`#template-${zone.name}`);
+                    if (template) {
+                        popupContent.innerHTML = template.innerHTML;
+                        infoOverlay.classList.remove('hidden');
+                    }
                 }
             } else if (zone.type === 'contact') {
                 indicatorText.textContent = 'BEACON ANOMALY: TRANSCEIVER SOCKET SECURED';
@@ -113,6 +181,16 @@ document.addEventListener('DOMContentLoaded', () => {
             if (currentActiveZone) {
                 currentActiveZone = null;
                 zoneIndicator.classList.add('hidden');
+
+                // Reset LED indicator styles to default
+                const led = zoneIndicator.querySelector('.indicator-led');
+                if (led) {
+                    led.style.background = '';
+                    led.style.boxShadow = '';
+                }
+                if (indicatorText) {
+                    indicatorText.style.color = '';
+                }
                 
                 // If the modal was opened by driving into a zone, close it automatically when driving away
                 if (openedByZone) {
