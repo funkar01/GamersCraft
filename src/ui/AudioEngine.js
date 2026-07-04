@@ -4,14 +4,23 @@ class AudioEngine {
         this.ctx = null;
         this.muted = true;
         this.masterVolume = null;
+        this.savedVolume = 0.3; // Cached volume level
         
         // Ambient wind/hum sound nodes
         this.ambientOsc = null;
         this.ambientGain = null;
 
-        // Drone engine sound nodes (low-frequency mechanical hum)
-        this.engineOsc = null;
+        // Drone engine growlers (low-frequency detuned mechanical saw/tri chords)
+        this.engineOsc1 = null;
+        this.engineOsc2 = null;
+        this.engineLowpass = null;
         this.engineGain = null;
+
+        // Cyberpunk FM warp oscillator (futuristic LFO modulated whistle)
+        this.warpOsc = null;
+        this.warpLFO = null;
+        this.warpLFOGain = null;
+        this.warpGain = null;
 
         // Drone woosh sound nodes (futuristic bandpass filtered noise)
         this.noiseSource = null;
@@ -28,8 +37,16 @@ class AudioEngine {
         
         this.ctx = new AudioContextClass();
         this.masterVolume = this.ctx.createGain();
-        this.masterVolume.gain.value = 0.3; // Default master volume
+        this.masterVolume.gain.value = this.savedVolume; // Default master volume from cache
         this.masterVolume.connect(this.ctx.destination);
+    }
+
+    setVolume(val) {
+        const cleanVal = Math.max(0, Math.min(1, parseFloat(val)));
+        this.savedVolume = cleanVal;
+        if (this.masterVolume && this.ctx) {
+            this.masterVolume.gain.setValueAtTime(cleanVal, this.ctx.currentTime);
+        }
     }
 
     setMute(muteState) {
@@ -43,6 +60,9 @@ class AudioEngine {
             }
             if (this.noiseGain) {
                 this.noiseGain.gain.setValueAtTime(0, this.ctx?.currentTime || 0);
+            }
+            if (this.warpGain) {
+                this.warpGain.gain.setValueAtTime(0, this.ctx?.currentTime || 0);
             }
         } else {
             this.init();
@@ -58,9 +78,10 @@ class AudioEngine {
             }
 
             // Start drone engine hover hum & woosh sounds
-            if (this.engineGain && this.noiseGain) {
+            if (this.engineGain && this.noiseGain && this.warpGain) {
                 this.engineGain.gain.setValueAtTime(0.02, this.ctx.currentTime);
                 this.noiseGain.gain.setValueAtTime(0.02, this.ctx.currentTime);
+                this.warpGain.gain.setValueAtTime(0.015, this.ctx.currentTime);
             } else {
                 this.startDroneSound();
             }
@@ -204,18 +225,55 @@ class AudioEngine {
     }
 
     startDroneSound() {
-        if (this.muted || !this.ctx || this.engineOsc) return;
+        if (this.muted || !this.ctx || this.engineOsc1) return;
         
         const now = this.ctx.currentTime;
         
-        // 1. Mechanical low hum
-        this.engineOsc = this.ctx.createOscillator();
-        this.engineGain = this.ctx.createGain();
-        this.engineOsc.type = 'sine';
-        this.engineOsc.frequency.value = 65; // Base low frequency hum
-        this.engineGain.gain.setValueAtTime(0.0, now); // start silent
+        // 1. Dual detuned oscillators for a rich, chorused cyberpunk growl
+        this.engineOsc1 = this.ctx.createOscillator();
+        this.engineOsc1.type = 'sawtooth';
+        this.engineOsc1.frequency.value = 58; // Low mechanical rumbling base
         
-        // 2. Futuristic noise woosh (wind/jet turbine)
+        this.engineOsc2 = this.ctx.createOscillator();
+        this.engineOsc2.type = 'triangle';
+        this.engineOsc2.frequency.value = 59.2; // Slightly detuned for chorus thickness
+        
+        this.engineLowpass = this.ctx.createBiquadFilter();
+        this.engineLowpass.type = 'lowpass';
+        this.engineLowpass.frequency.value = 160; // Keep the saw wave thick and deep
+        
+        this.engineGain = this.ctx.createGain();
+        this.engineGain.gain.setValueAtTime(0.0, now); // start silent
+
+        // Connect mechanical growl
+        this.engineOsc1.connect(this.engineLowpass);
+        this.engineOsc2.connect(this.engineLowpass);
+        this.engineLowpass.connect(this.engineGain);
+        this.engineGain.connect(this.masterVolume);
+        
+        // 2. Futuristic Cyberpunk FM Wobble (Frequency Modulated ion drive)
+        this.warpOsc = this.ctx.createOscillator();
+        this.warpOsc.type = 'sine';
+        this.warpOsc.frequency.value = 135; // Hover base whistle
+        
+        this.warpLFO = this.ctx.createOscillator();
+        this.warpLFO.type = 'sine';
+        this.warpLFO.frequency.value = 11; // 11Hz speed base
+        
+        this.warpLFOGain = this.ctx.createGain();
+        this.warpLFOGain.gain.value = 32; // Depth of frequency modulation
+        
+        this.warpGain = this.ctx.createGain();
+        this.warpGain.gain.setValueAtTime(0.0, now); // start silent
+        
+        // FM Modulation: connect LFO to warp oscillator frequency
+        this.warpLFO.connect(this.warpLFOGain);
+        this.warpLFOGain.connect(this.warpOsc.frequency);
+        
+        this.warpOsc.connect(this.warpGain);
+        this.warpGain.connect(this.masterVolume);
+        
+        // 3. Resonant futuristic wind/woosh (wind turbine/jet flow)
         const bufferSize = this.ctx.sampleRate * 2;
         const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
         const data = buffer.getChannelData(0);
@@ -229,55 +287,72 @@ class AudioEngine {
         
         this.noiseFilter = this.ctx.createBiquadFilter();
         this.noiseFilter.type = 'bandpass';
-        this.noiseFilter.Q.value = 4.0; // Resonant whistle/wind
-        this.noiseFilter.frequency.value = 250;
+        this.noiseFilter.Q.value = 4.2; // Resonant cyberpunk wind whistle
+        this.noiseFilter.frequency.value = 240;
         
         this.noiseGain = this.ctx.createGain();
         this.noiseGain.gain.setValueAtTime(0.0, now); // start silent
         
-        // Connect mechanical hum
-        this.engineOsc.connect(this.engineGain);
-        this.engineGain.connect(this.masterVolume);
-        
-        // Connect noise woosh
+        // Connect noise filter
         this.noiseSource.connect(this.noiseFilter);
         this.noiseFilter.connect(this.noiseGain);
         this.noiseGain.connect(this.masterVolume);
         
-        // Start both
-        this.engineOsc.start(now);
+        // Start all sound generators
+        this.engineOsc1.start(now);
+        this.engineOsc2.start(now);
+        this.warpOsc.start(now);
+        this.warpLFO.start(now);
         this.noiseSource.start(now);
     }
 
     updateDroneSound(velocityRatio) {
         if (this.muted || !this.ctx) return;
-        if (!this.engineOsc) {
+        if (!this.engineOsc1) {
             this.startDroneSound();
         }
-        if (!this.engineOsc) return;
+        if (!this.engineOsc1) return;
         
         const now = this.ctx.currentTime;
         
-        // 1. Modulate Low Hum
-        // Pitch goes from 65Hz (hover) up to 130Hz (full speed)
-        const humFreq = 65 + velocityRatio * 65;
-        this.engineOsc.frequency.setTargetAtTime(humFreq, now, 0.1);
+        // 1. Modulate Cyberpunk Low growl
+        // Frequencies sweep up to 135Hz
+        const baseFreq = 58 + velocityRatio * 77;
+        this.engineOsc1.frequency.setTargetAtTime(baseFreq, now, 0.1);
+        this.engineOsc2.frequency.setTargetAtTime(baseFreq + 1.2, now, 0.1);
         
-        // Volume goes from 0.02 to 0.05
-        const humVol = 0.02 + velocityRatio * 0.03;
-        this.engineGain.gain.setTargetAtTime(humVol, now, 0.1);
+        // Open filter cutoff at higher speeds
+        const filterCut = 160 + velocityRatio * 220;
+        this.engineLowpass.frequency.setTargetAtTime(filterCut, now, 0.1);
         
-        // 2. Modulate Noise Woosh
-        // Cutoff sweeps from 250Hz (low whistle hover) up to 900Hz (bright woosh thrust)
-        const filterCutoff = 250 + velocityRatio * 650;
-        this.noiseFilter.frequency.setTargetAtTime(filterCutoff, now, 0.15);
+        // Volume grows from 0.02 to 0.06
+        const engineVol = 0.02 + velocityRatio * 0.04;
+        this.engineGain.gain.setTargetAtTime(engineVol, now, 0.1);
         
-        // Resonance widens at full speed (Q drops slightly to let more broadband wind through)
-        const filterQ = 4.0 - velocityRatio * 1.5;
+        // 2. Modulate Cyberpunk Warp Wobbler
+        // High whistle sweeps up to 360Hz
+        const warpFreq = 135 + velocityRatio * 225;
+        this.warpOsc.frequency.setTargetAtTime(warpFreq, now, 0.1);
+        
+        // LFO rate speeds up to 24Hz
+        const lfoRate = 11 + velocityRatio * 13;
+        this.warpLFO.frequency.setTargetAtTime(lfoRate, now, 0.1);
+        
+        // FM Wobbler volume sweeps from 0.015 to 0.035
+        const warpVol = 0.015 + velocityRatio * 0.02;
+        this.warpGain.gain.setTargetAtTime(warpVol, now, 0.1);
+        
+        // 3. Modulate Resonant Wind Woosh
+        // Cutoff sweeps from 240Hz up to 1050Hz
+        const noiseCutoff = 240 + velocityRatio * 810;
+        this.noiseFilter.frequency.setTargetAtTime(noiseCutoff, now, 0.15);
+        
+        // Resonance tightens slightly for extra whistling
+        const filterQ = 4.2 - velocityRatio * 1.2;
         this.noiseFilter.Q.setTargetAtTime(filterQ, now, 0.15);
         
-        // Volume sweeps from 0.02 (soft breath) up to 0.09 (heavy sci-fi turbine woosh)
-        const noiseVol = 0.02 + velocityRatio * 0.07;
+        // Volume sweeps up to 0.1
+        const noiseVol = 0.02 + velocityRatio * 0.08;
         this.noiseGain.gain.setTargetAtTime(noiseVol, now, 0.1);
     }
 

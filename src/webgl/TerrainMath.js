@@ -12,6 +12,13 @@ export function getTerrainHeight(x, z) {
     h += Math.sin(x * 0.22) * Math.cos(z * 0.22) * 0.55;    // medium ridges
     h += Math.sin(x * 0.45) * Math.cos(z * 0.45) * 0.15;    // minor soil bumps
 
+    // Add massive mountain ranges at the far edges (dist > 40)
+    if (dist > 40.0) {
+        const mountainWeight = Math.min(3.5, (dist - 40.0) * 0.15); // scales up to 3.5
+        const mountainNoise = Math.sin(x * 0.035) * Math.cos(z * 0.035) * 12.0 + Math.sin(x * 0.1) * 3.0;
+        h += mountainNoise * mountainWeight;
+    }
+
     // Smooth transition dampening (dampens height near spawner circle)
     const damp = Math.min((dist - 7.5) / 12.0, 1.0);
     return h * damp;

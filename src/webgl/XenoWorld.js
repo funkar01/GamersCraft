@@ -18,7 +18,7 @@ export class XenoWorld {
         
         // Grass InstancedMesh parameters
         this.grassMesh = null;
-        this.grassCount = 20000;
+        this.grassCount = 35000;
         this.grassPositions = null;
         this.grassScales = null;
         this.grassYaws = null;
@@ -63,10 +63,10 @@ export class XenoWorld {
         const gridTexture = new THREE.CanvasTexture(canvas);
         gridTexture.wrapS = THREE.RepeatWrapping;
         gridTexture.wrapT = THREE.RepeatWrapping;
-        gridTexture.repeat.set(50, 50);
+        gridTexture.repeat.set(125, 125);
 
         // --- 2. Deformed Ground Geometry ---
-        const groundGeom = new THREE.PlaneGeometry(100, 100, 48, 48);
+        const groundGeom = new THREE.PlaneGeometry(250, 250, 96, 96);
         
         const posAttr = groundGeom.attributes.position;
         for (let i = 0; i < posAttr.count; i++) {
@@ -88,20 +88,109 @@ export class XenoWorld {
         ground.receiveShadow = true;
         this.group.add(ground);
 
-        // Boundary Monolith Walls
-        const boundaryMat = new THREE.MeshStandardMaterial({ color: 0x09090e, roughness: 0.6 });
-        const addBoundaryMonolith = (x, z, w, d) => {
-            const gy = getTerrainHeight(x, z);
-            const block = new THREE.Mesh(new THREE.BoxGeometry(w, 2.2, d), boundaryMat);
-            block.position.set(x, gy + 1.1, z);
-            block.castShadow = true;
-            block.receiveShadow = true;
-            this.group.add(block);
+        // --- Stylized Stacked Plateaus & Spire Rocks ---
+        const plateauMat = new THREE.MeshStandardMaterial({
+            color: 0x140e28, // Deep violet rock matching sky
+            roughness: 0.85,
+            metalness: 0.2,
+            flatShading: true
+        });
+
+        const neonPinkMat = new THREE.MeshBasicMaterial({
+            color: 0xff00ff,
+            transparent: true,
+            opacity: 0.85,
+            blending: THREE.AdditiveBlending
+        });
+
+        // Function to create a stacked stone plateau with neon pink under-glow
+        const createStackedPlateau = (px, pz, scaleFactor = 1.0) => {
+            const group = new THREE.Group();
+            const gy = getTerrainHeight(px, pz);
+            
+            // Layer 1 (Bottom slab)
+            const slab1Geom = new THREE.CylinderGeometry(5 * scaleFactor, 6 * scaleFactor, 1.2, 5);
+            const slab1 = new THREE.Mesh(slab1Geom, plateauMat);
+            slab1.position.y = 0.6;
+            slab1.rotation.y = Math.random() * Math.PI;
+            slab1.castShadow = true;
+            slab1.receiveShadow = true;
+            group.add(slab1);
+            
+            // Neon pink under-glow ring between slab 1 and slab 2
+            const glow1Geom = new THREE.TorusGeometry(4.2 * scaleFactor, 0.12, 4, 16);
+            glow1Geom.rotateX(Math.PI / 2);
+            const glow1 = new THREE.Mesh(glow1Geom, neonPinkMat);
+            glow1.position.y = 1.2;
+            group.add(glow1);
+
+            // Layer 2 (Middle slab)
+            const slab2Geom = new THREE.CylinderGeometry(3.5 * scaleFactor, 4.2 * scaleFactor, 0.9, 5);
+            const slab2 = new THREE.Mesh(slab2Geom, plateauMat);
+            slab2.position.y = 1.65;
+            slab2.rotation.y = Math.random() * Math.PI;
+            slab2.castShadow = true;
+            slab2.receiveShadow = true;
+            group.add(slab2);
+
+            // Neon pink under-glow ring between slab 2 and slab 3
+            const glow2Geom = new THREE.TorusGeometry(2.8 * scaleFactor, 0.1, 4, 16);
+            glow2Geom.rotateX(Math.PI / 2);
+            const glow2 = new THREE.Mesh(glow2Geom, neonPinkMat);
+            glow2.position.y = 2.1;
+            group.add(glow2);
+
+            // Layer 3 (Top slab)
+            const slab3Geom = new THREE.CylinderGeometry(2.2 * scaleFactor, 2.8 * scaleFactor, 0.7, 5);
+            const slab3 = new THREE.Mesh(slab3Geom, plateauMat);
+            slab3.position.y = 2.45;
+            slab3.rotation.y = Math.random() * Math.PI;
+            slab3.castShadow = true;
+            slab3.receiveShadow = true;
+            group.add(slab3);
+
+            group.position.set(px, gy - 0.2, pz);
+            this.group.add(group);
         };
-        addBoundaryMonolith(0, 50, 100, 2);
-        addBoundaryMonolith(0, -50, 100, 2);
-        addBoundaryMonolith(50, 0, 2, 100);
-        addBoundaryMonolith(-50, 0, 2, 100);
+
+        // Create 6 stacked rock plateaus
+        const plateauCoords = [
+            { x: -25, z: -15, scale: 1.4 },
+            { x: 30, z: -35, scale: 1.6 },
+            { x: -35, z: 25, scale: 1.2 },
+            { x: 40, z: 20, scale: 1.5 },
+            { x: -10, z: -40, scale: 1.3 },
+            { x: 20, z: 45, scale: 1.5 }
+        ];
+        plateauCoords.forEach(c => createStackedPlateau(c.x, c.z, c.scale));
+
+        // Function to create a majestic spire rock
+        const createSpireRock = (px, pz, scaleH = 1.0) => {
+            const spireGeom = new THREE.ConeGeometry(2.5, 20 * scaleH, 4);
+            const spire = new THREE.Mesh(spireGeom, plateauMat);
+            const gy = getTerrainHeight(px, pz);
+            
+            spire.position.set(px, gy + 10 * scaleH - 1.5, pz);
+            spire.rotation.y = Math.random() * Math.PI;
+            spire.rotation.x = (Math.random() - 0.5) * 0.08;
+            spire.rotation.z = (Math.random() - 0.5) * 0.08;
+            spire.castShadow = true;
+            spire.receiveShadow = true;
+            this.group.add(spire);
+        };
+
+        // Spawn 15 towering spire rocks around the horizon landscape
+        const spireCoords = [
+            { x: -55, z: -45, scale: 1.2 }, { x: 55, z: -55, scale: 1.4 },
+            { x: -60, z: 50, scale: 1.5 }, { x: 65, z: 45, scale: 1.3 },
+            { x: -80, z: -20, scale: 1.6 }, { x: 80, z: -10, scale: 1.4 },
+            { x: -75, z: 75, scale: 1.7 }, { x: 75, z: 70, scale: 1.5 },
+            { x: -100, z: -80, scale: 1.8 }, { x: 90, z: -90, scale: 1.6 },
+            { x: -95, z: 95, scale: 1.9 }, { x: 100, z: 90, scale: 1.7 },
+            { x: 0, z: -95, scale: 1.5 }, { x: -110, z: 10, scale: 1.8 },
+            { x: 110, z: -20, scale: 1.7 }
+        ];
+        spireCoords.forEach(c => createSpireRock(c.x, c.z, c.scale));
 
         // --- 3. Blocky Grey Boulders (Slate Obstacles) ---
         const boulderGeom = new THREE.IcosahedronGeometry(2.0, 0); // 0 subdivision = very blocky
@@ -753,14 +842,35 @@ export class XenoWorld {
     }
 
     createInstancedGrass() {
-        // Grass width set to ~1/4 of its height (base radius 0.18, height 1.4) to cover large areas
-        const grassGeom = new THREE.ConeGeometry(0.18, 1.4, 3);
-        // Offset grass mesh pivot coordinates to bottom face
-        grassGeom.translate(0, 0.7, 0);
+        // Create custom bent grass geometry using 3 triangles (5 vertices, curving in Z)
+        const grassGeom = new THREE.BufferGeometry();
+        const vertices = new Float32Array([
+            -0.12, 0.0,  0.0,   // 0: Bottom left
+             0.12, 0.0,  0.0,   // 1: Bottom right
+            -0.08, 0.65, 0.0,   // 2: Middle left
+             0.08, 0.65, 0.0,   // 3: Middle right
+             0.0,  1.3, -0.15   // 4: Curved top tip (bent forward slightly)
+        ]);
+        const uvs = new Float32Array([
+            0.0, 0.0,
+            1.0, 0.0,
+            0.1, 0.5,
+            0.9, 0.5,
+            0.5, 1.0
+        ]);
+        const indices = [
+            0, 1, 3,  // Bottom triangle 1
+            0, 3, 2,  // Bottom triangle 2
+            2, 3, 4   // Top bent triangle
+        ];
+        grassGeom.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+        grassGeom.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+        grassGeom.setIndex(indices);
+        grassGeom.computeVertexNormals();
         
         const grassMat = new THREE.MeshStandardMaterial({
             roughness: 0.7,
-            metalness: 0.1,
+            metalness: 0.15,
             flatShading: true,
             side: THREE.DoubleSide
         });
@@ -997,7 +1107,7 @@ export class XenoWorld {
                     vel.y = -vel.y;
                 }
 
-                const limit = 45.0;
+                const limit = 120.0;
                 if (Math.abs(posArr[i3]) > limit) posArr[i3] = -posArr[i3];
                 if (Math.abs(posArr[i3 + 2]) > limit) posArr[i3 + 2] = -posArr[i3 + 2];
             }
@@ -1025,10 +1135,6 @@ export class XenoWorld {
             c.pos.addScaledVector(c.vel, delta);
             c.mesh.position.copy(c.pos);
             c.mesh.rotation.y += c.rotVel.y * delta;
-
-            const limit = 48.0;
-            c.pos.x = THREE.MathUtils.clamp(c.pos.x, -limit, limit);
-            c.pos.z = THREE.MathUtils.clamp(c.pos.z, -limit, limit);
 
             if (drone) {
                 const dist = c.pos.distanceTo(drone.position);
