@@ -609,6 +609,14 @@ export class WebGLRendererManager {
             glowColor = 0x00ff66; // Bright green
         } else if (type === 'xeno-cargo') {
             glowColor = 0xffa500; // Orange/amber
+        } else if (type === 'valkyrie-x') {
+            glowColor = 0xff00ff; // Hot pink/magenta
+        } else if (type === 'solar-wing') {
+            glowColor = 0xff7a00; // Solar orange
+        } else if (type === 'cyan-dart') {
+            glowColor = 0x00f3ff; // Cyan
+        } else if (type === 'sentinel-v') {
+            glowColor = 0x0066ff; // Cool blue
         }
         
         if (this.droneGlow) {

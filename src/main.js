@@ -325,6 +325,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const volumeSlider = document.getElementById('volume-slider');
     const volumePercent = document.getElementById('volume-percent');
     
+    const musicSlider = document.getElementById('music-slider');
+    const musicPercent = document.getElementById('music-percent');
+    
     const lightSlider = document.getElementById('light-slider');
     const lightPercent = document.getElementById('light-percent');
     
@@ -376,6 +379,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 lightPercent.textContent = `${Math.round(currentLightMult * 100)}%`;
             }
 
+            // Sync music slider state
+            if (musicSlider) {
+                const currentMusicVol = audio.bgmVolume !== undefined ? audio.bgmVolume : 0.12;
+                musicSlider.value = currentMusicVol;
+                musicPercent.textContent = `${Math.round(currentMusicVol * 100)}%`;
+            }
+
             // Initialize or update the 3D preview viewport
             initDronePreview();
             updatePreviewDroneModel(selectedDroneType);
@@ -397,6 +407,26 @@ document.addEventListener('DOMContentLoaded', () => {
             const val = parseFloat(e.target.value);
             volumePercent.textContent = `${Math.round(val * 100)}%`;
             audio.setVolume(val);
+            
+            // Unmute if slider is pulled up from 0
+            if (val > 0 && audio.muted) {
+                audio.setMute(false);
+                const soundOnSvg = document.getElementById('sound-on-svg');
+                const soundOffSvg = document.getElementById('sound-off-svg');
+                if (soundOnSvg && soundOffSvg) {
+                    soundOffSvg.classList.remove('hidden-icon');
+                    soundOnSvg.classList.add('hidden-icon');
+                }
+            }
+        });
+    }
+
+    // Music Volume Slider update
+    if (musicSlider) {
+        musicSlider.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            musicPercent.textContent = `${Math.round(val * 100)}%`;
+            audio.setBgmVolume(val);
             
             // Unmute if slider is pulled up from 0
             if (val > 0 && audio.muted) {

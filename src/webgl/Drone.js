@@ -1,5 +1,209 @@
 import * as THREE from 'three';
 import { getTerrainHeight } from './TerrainMath.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+
+const gltfLoader = new GLTFLoader();
+
+const DRONE_CONFIGS = {
+    'default': {
+        path: 'Assets/3D_Models_Drones/low_poly_space_ship.glb',
+        scaleMultiplier: 0.9,
+        rotationY: Math.PI,
+        positionY: -0.05,
+        materialMap: (material, name) => {
+            return {
+                color: 0x1e293b, // Deep slate body
+                emissive: 0x00f0ff, // Neon cyan accents
+                emissiveIntensity: 1.8,
+                metalness: 0.9,
+                roughness: 0.15
+            };
+        },
+        thrusterOffsets: [
+            new THREE.Vector3(-0.25, 0, -0.65),
+            new THREE.Vector3(0.25, 0, -0.65)
+        ],
+        flameColor: 0xff0055, // pink-red flame
+        lightColor: 0x00f0ff, // cyan light
+        lightOffset: new THREE.Vector3(0, 0, 0.7)
+    },
+    'swift-z': {
+        path: 'Assets/3D_Models_Drones/low_poly_space_ship_2.glb',
+        scaleMultiplier: 1.05,
+        rotationY: Math.PI,
+        positionY: 0,
+        materialMap: (material, name) => {
+            const lowerName = name.toLowerCase();
+            if (lowerName.includes('001') || lowerName.includes('006') || lowerName.includes('007')) {
+                return { color: 0x111115, metalness: 0.95, roughness: 0.2 }; // Dark carbon chassis
+            } else if (lowerName.includes('008') || lowerName.includes('005')) {
+                return { color: 0xff7a00, emissive: 0xff3300, emissiveIntensity: 2.2, metalness: 0.5, roughness: 0.3 }; // Sport orange trim
+            } else if (lowerName.includes('004')) {
+                return { color: 0xffaa00, metalness: 0.8, roughness: 0.2 }; // Gold accents
+            }
+            return { color: 0x3e3f46, metalness: 0.7, roughness: 0.3 }; // grey details
+        },
+        thrusterOffsets: [
+            new THREE.Vector3(-0.35, 0, -0.8),
+            new THREE.Vector3(0.35, 0, -0.8)
+        ],
+        flameColor: 0x39ff14, // green flame
+        lightColor: 0x39ff14, // green light
+        lightOffset: new THREE.Vector3(0, 0, 0.9)
+    },
+    'interceptor-gl': {
+        path: 'Assets/3D_Models_Drones/low_poly_space_ship_3.glb',
+        scaleMultiplier: 1.05,
+        rotationY: Math.PI,
+        positionY: 0.05,
+        materialMap: (material, name) => {
+            const lowerName = name.toLowerCase();
+            if (lowerName.includes('spaceship1')) {
+                return { color: 0xd1d5db, metalness: 0.95, roughness: 0.1 }; // Titanium white
+            } else if (lowerName.includes('spaceship2')) {
+                return { color: 0x18181b, metalness: 0.8, roughness: 0.3 }; // Carbon dark grey
+            } else if (lowerName.includes('spaceship3')) {
+                return { color: 0x39ff14, emissive: 0x39ff14, emissiveIntensity: 1.8, metalness: 0.5, roughness: 0.2 }; // Acid green accents
+            } else if (lowerName.includes('window')) {
+                return { color: 0x00ffcc, emissive: 0x00ffcc, emissiveIntensity: 2.5, transparent: true, opacity: 0.8, metalness: 0.1, roughness: 0.05 }; // Cyan glass
+            }
+            return null;
+        },
+        thrusterOffsets: [
+            new THREE.Vector3(-0.25, 0.05, -0.73),
+            new THREE.Vector3(0.25, 0.05, -0.73)
+        ],
+        flameColor: 0x00ff66,
+        lightColor: 0x00ff66,
+        lightOffset: new THREE.Vector3(0, 0, 0.8)
+    },
+    'xeno-cargo': {
+        path: 'Assets/3D_Models_Drones/space_ship.glb',
+        scaleMultiplier: 1.0,
+        rotationY: Math.PI,
+        positionY: 0.1,
+        materialMap: (material, name) => {
+            const lowerName = name.toLowerCase();
+            if (lowerName.includes('shipcolor')) {
+                return { color: 0x2b4c3f, metalness: 0.8, roughness: 0.55 }; // Teal military green
+            } else if (lowerName.includes('wingcontrolcolor')) {
+                return { color: 0xff5500, metalness: 0.9, roughness: 0.3 }; // Warning orange
+            } else if (lowerName.includes('metal')) {
+                return { color: 0x4b5563, metalness: 0.9, roughness: 0.4 }; // Raw steel
+            } else if (lowerName.includes('glass')) {
+                return { color: 0xffaa00, emissive: 0xff5500, emissiveIntensity: 1.8, transparent: true, opacity: 0.6, metalness: 0.1, roughness: 0.1 }; // Amber cockpit
+            } else if (lowerName.includes('lights') || lowerName.includes('gauges')) {
+                return { color: 0xffaa00, emissive: 0xffaa00, emissiveIntensity: 2.8 }; // Glowing amber
+            }
+            return { color: 0x1f2937, metalness: 0.6, roughness: 0.5 };
+        },
+        thrusterOffsets: [
+            new THREE.Vector3(-0.35, 0.1, -0.6),
+            new THREE.Vector3(0.35, 0.1, -0.6)
+        ],
+        flameColor: 0xffa500,
+        lightColor: 0xffa500,
+        lightOffset: new THREE.Vector3(0, 0.1, 0.7)
+    },
+    'valkyrie-x': {
+        path: 'Assets/3D_Models_Drones/low_poly_space_ship_07.glb',
+        scaleMultiplier: 1.0,
+        rotationY: Math.PI,
+        positionY: 0,
+        materialMap: (material, name) => {
+            const lowerName = name.toLowerCase();
+            if (lowerName.includes('004') || lowerName.includes('002')) {
+                return { color: 0x1e1b4b, metalness: 0.9, roughness: 0.2 }; // Deep dark indigo
+            } else if (lowerName.includes('001')) {
+                return { color: 0xff007f, emissive: 0xff007f, emissiveIntensity: 2.2, metalness: 0.6, roughness: 0.15 }; // Hot magenta
+            } else if (lowerName.includes('003')) {
+                return { color: 0x111827, metalness: 0.95, roughness: 0.1 }; // Black metallic
+            }
+            return { color: 0x4f46e5, metalness: 0.8, roughness: 0.25 }; // Purple details
+        },
+        thrusterOffsets: [
+            new THREE.Vector3(-0.2, 0, -0.8),
+            new THREE.Vector3(0.2, 0, -0.8)
+        ],
+        flameColor: 0xff00ff,
+        lightColor: 0xff00ff,
+        lightOffset: new THREE.Vector3(0, 0, 0.9)
+    },
+    'solar-wing': {
+        path: 'Assets/3D_Models_Drones/low_poly_space_ship_09.glb',
+        scaleMultiplier: 1.0,
+        rotationY: Math.PI,
+        positionY: 0,
+        materialMap: (material, name) => {
+            const lowerName = name.toLowerCase();
+            if (lowerName.includes('material') && !lowerName.includes('00')) {
+                return { color: 0x09090b, metalness: 0.9, roughness: 0.25 }; // Carbon fiber black
+            } else if (lowerName.includes('004')) {
+                return { color: 0xff8c00, emissive: 0xff3c00, emissiveIntensity: 2.2, metalness: 0.8, roughness: 0.15 }; // Flame orange
+            } else if (lowerName.includes('003') || lowerName.includes('001')) {
+                return { color: 0xffd700, metalness: 0.95, roughness: 0.1 }; // Gold trim
+            }
+            return { color: 0x27272a, metalness: 0.7, roughness: 0.3 };
+        },
+        thrusterOffsets: [
+            new THREE.Vector3(-0.25, 0, -0.8),
+            new THREE.Vector3(0.25, 0, -0.8)
+        ],
+        flameColor: 0xff4500,
+        lightColor: 0xff7a00,
+        lightOffset: new THREE.Vector3(0, 0, 0.85)
+    },
+    'cyan-dart': {
+        path: 'Assets/3D_Models_Drones/low_poly_space_ship_10.glb',
+        scaleMultiplier: 1.0,
+        rotationY: Math.PI,
+        positionY: 0,
+        materialMap: (material, name) => {
+            const lowerName = name.toLowerCase();
+            if (lowerName.includes('material') && !lowerName.includes('00')) {
+                return { color: 0x075e7a, metalness: 0.95, roughness: 0.1 }; // Metallic teal
+            } else if (lowerName.includes('003') || lowerName.includes('004')) {
+                return { color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 2.2, metalness: 0.5, roughness: 0.1 }; // Neon cyan glow
+            } else if (lowerName.includes('001')) {
+                return { color: 0x0f172a, metalness: 0.9, roughness: 0.35 }; // Stealth dark grey
+            }
+            return { color: 0xd1d5db, metalness: 0.8, roughness: 0.2 };
+        },
+        thrusterOffsets: [
+            new THREE.Vector3(-0.15, 0, -0.8),
+            new THREE.Vector3(0.15, 0, -0.8)
+        ],
+        flameColor: 0x00d2ff,
+        lightColor: 0x00f3ff,
+        lightOffset: new THREE.Vector3(0, 0.05, 0.9)
+    },
+    'sentinel-v': {
+        path: 'Assets/3D_Models_Drones/low_poly_ship.glb',
+        scaleMultiplier: 0.95,
+        rotationY: Math.PI,
+        positionY: 0.05,
+        materialMap: (material, name) => {
+            const lowerName = name.toLowerCase();
+            if (lowerName.includes('lambert5')) {
+                return { color: 0x27272a, metalness: 0.8, roughness: 0.3 }; // Gunmetal chassis
+            } else if (lowerName.includes('lambert6')) {
+                return { color: 0x1e3a8a, metalness: 0.9, roughness: 0.2 }; // Cobalt blue
+            } else if (lowerName.includes('lambert7')) {
+                return { color: 0x3b82f6, emissive: 0x0066ff, emissiveIntensity: 2.0, metalness: 0.5, roughness: 0.15 }; // Electric blue energy
+            } else if (lowerName.includes('lambert8')) {
+                return { color: 0x111827, metalness: 0.95, roughness: 0.15 }; // Black structural steel
+            }
+            return { color: 0xe2e8f0, metalness: 0.9, roughness: 0.25 }; // Chrome detail
+        },
+        thrusterOffsets: [
+            new THREE.Vector3(-0.2, 0, -0.8),
+            new THREE.Vector3(0.2, 0, -0.8)
+        ],
+        flameColor: 0x0066ff,
+        lightColor: 0x0066ff,
+        lightOffset: new THREE.Vector3(0, 0.05, 0.85)
+    }
+};
 
 export class Drone {
     constructor() {
@@ -36,6 +240,7 @@ export class Drone {
         this.thrusters = [];
         this.flameMats = [];
         this.currentType = 'default';
+        this.currentLoadId = 0;
         
         this.init();
     }
@@ -44,26 +249,167 @@ export class Drone {
         this.rebuildModel(this.currentType);
     }
 
-    rebuildModel(type) {
-        this.currentType = type;
-        
-        // Remove all children
+    buildProceduralFallback(type) {
+        // Clear current elements first
         while (this.mesh.children.length > 0) {
             this.mesh.remove(this.mesh.children[0]);
         }
-        
         this.thrusters = [];
         this.flameMats = [];
-        
+
         if (type === 'swift-z') {
             this.buildSwiftZModel();
         } else if (type === 'interceptor-gl') {
             this.buildInterceptorModel();
         } else if (type === 'xeno-cargo') {
             this.buildXenoCargoModel();
+        } else if (type === 'valkyrie-x') {
+            this.buildValkyrieXModel();
+        } else if (type === 'solar-wing') {
+            this.buildSolarWingModel();
+        } else if (type === 'cyan-dart') {
+            this.buildCyanDartModel();
+        } else if (type === 'sentinel-v') {
+            this.buildSentinelVModel();
         } else {
             this.buildDefaultModel();
         }
+    }
+
+    rebuildModel(type) {
+        this.currentType = type;
+        this.currentLoadId = (this.currentLoadId || 0) + 1;
+        const loadId = this.currentLoadId;
+
+        // 1. Build local procedural fallback immediately (zero delay)
+        this.buildProceduralFallback(type);
+
+        // 2. Fetch config
+        const config = DRONE_CONFIGS[type] || DRONE_CONFIGS['default'];
+
+        // 3. Load GLB asynchronously
+        gltfLoader.load(config.path, (gltf) => {
+            // Guard against race conditions from rapid clicking
+            if (this.currentLoadId !== loadId) return;
+
+            // Clear procedural fallback
+            while (this.mesh.children.length > 0) {
+                this.mesh.remove(this.mesh.children[0]);
+            }
+            this.thrusters = [];
+            this.flameMats = [];
+
+            const modelScene = gltf.scene;
+
+            // Reset scale/position/rotation first to capture clean geometry bounds
+            modelScene.scale.set(1, 1, 1);
+            modelScene.position.set(0, 0, 0);
+            modelScene.rotation.set(
+                config.rotationX || 0,
+                config.rotationY || 0,
+                config.rotationZ || 0
+            );
+
+            // Compute bounding box strictly from meshes to avoid helper/camera objects
+            const box = new THREE.Box3();
+            let hasMesh = false;
+            modelScene.traverse((child) => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                    if (!hasMesh) {
+                        box.setFromObject(child);
+                        hasMesh = true;
+                    } else {
+                        box.expandByObject(child);
+                    }
+                }
+            });
+            if (!hasMesh) {
+                box.setFromObject(modelScene);
+            }
+
+            const center = new THREE.Vector3();
+            box.getCenter(center);
+            const size = new THREE.Vector3();
+            box.getSize(size);
+
+            // Calculate auto-scale factor (normalize maximum dimension to 1.6 units)
+            const maxDim = Math.max(size.x, size.y, size.z);
+            const targetSize = 1.6;
+            const scaleFactor = (targetSize / maxDim) * (config.scaleMultiplier || 1.0);
+
+            // Apply scale and position offset so the bounding box center aligns at (0, config.positionY, 0)
+            modelScene.scale.set(scaleFactor, scaleFactor, scaleFactor);
+            modelScene.position.copy(center).multiplyScalar(-scaleFactor);
+            modelScene.position.y += (config.positionY || 0);
+            if (config.positionX) modelScene.position.x += config.positionX;
+            if (config.positionZ) modelScene.position.z += config.positionZ;
+
+            // Traverse meshes and customize PBR materials and colors
+            modelScene.traverse((child) => {
+                if (child.isMesh && child.material) {
+                    const matProps = config.materialMap(child.material, child.material.name || '');
+                    if (matProps) {
+                        child.material = new THREE.MeshStandardMaterial({
+                            color: matProps.color !== undefined ? matProps.color : child.material.color,
+                            roughness: matProps.roughness !== undefined ? matProps.roughness : 0.4,
+                            metalness: matProps.metalness !== undefined ? matProps.metalness : 0.5,
+                            emissive: matProps.emissive !== undefined ? new THREE.Color(matProps.emissive) : new THREE.Color(0,0,0),
+                            emissiveIntensity: matProps.emissiveIntensity !== undefined ? matProps.emissiveIntensity : 0.0,
+                            transparent: matProps.transparent !== undefined ? matProps.transparent : false,
+                            opacity: matProps.opacity !== undefined ? matProps.opacity : 1.0
+                        });
+                    } else {
+                        // Standardize materials
+                        child.material = new THREE.MeshStandardMaterial({
+                            color: child.material.color,
+                            roughness: 0.4,
+                            metalness: 0.5
+                        });
+                    }
+                }
+            });
+
+            this.mesh.add(modelScene);
+
+            // 4. Attach Flickering Jet Flames
+            const flameGeom = new THREE.ConeGeometry(0.12, 0.45, 12);
+            flameGeom.rotateX(-Math.PI / 2); // Jet points backwards
+
+            config.thrusterOffsets.forEach((offset) => {
+                const podGroup = new THREE.Group();
+                podGroup.position.copy(offset);
+
+                const flameMat = new THREE.MeshBasicMaterial({
+                    color: config.flameColor,
+                    transparent: true,
+                    opacity: 0.8
+                });
+
+                const flame = new THREE.Mesh(flameGeom, flameMat);
+                flame.position.set(0, 0, -0.22);
+                podGroup.add(flame);
+
+                this.mesh.add(podGroup);
+                this.thrusters.push(podGroup);
+                this.flameMats.push(flameMat);
+            });
+
+            // 5. Attach Spotlight Headlight
+            const targetObj = new THREE.Object3D();
+            targetObj.position.set(0, 0, 16);
+            this.mesh.add(targetObj);
+
+            const spotLight = new THREE.SpotLight(config.lightColor, 8, 40, Math.PI / 4, 0.5, 1);
+            spotLight.position.copy(config.lightOffset || new THREE.Vector3(0, 0, 1.0));
+            spotLight.target = targetObj;
+            spotLight.castShadow = true;
+            this.mesh.add(spotLight);
+
+        }, undefined, (error) => {
+            console.error(`Error loading GLB model for ${type}:`, error);
+        });
     }
 
     buildDefaultModel() {
@@ -707,9 +1053,527 @@ export class Drone {
         visor.position.set(0, -0.12, 0.68);
         this.mesh.add(visor);
 
+        spotLight.castShadow = true;
+        this.mesh.add(spotLight);
+    }
+
+    buildValkyrieXModel() {
+        // --- 1. Fuselage (Bullet shape, indigo, high-poly smooth) ---
+        const bodyGeom = new THREE.CylinderGeometry(0.01, 0.48, 1.8, 16);
+        bodyGeom.rotateX(Math.PI / 2);
+        const bodyMat = new THREE.MeshStandardMaterial({
+            color: 0x23273a, // Deep indigo/charcoal
+            roughness: 0.25,
+            metalness: 0.7,
+            flatShading: false
+        });
+        const fuselage = new THREE.Mesh(bodyGeom, bodyMat);
+        fuselage.castShadow = true;
+        fuselage.receiveShadow = true;
+        fuselage.position.y = 0.05;
+        this.mesh.add(fuselage);
+
+        // Cockpit dome (Magenta/Pink translucent sphere)
+        const cockpitGeom = new THREE.SphereGeometry(0.24, 16, 16);
+        const cockpitMat = new THREE.MeshStandardMaterial({
+            color: 0xff0088,
+            emissive: 0xff0088,
+            emissiveIntensity: 1.2,
+            roughness: 0.1,
+            metalness: 0.9,
+            transparent: true,
+            opacity: 0.8
+        });
+        const cockpit = new THREE.Mesh(cockpitGeom, cockpitMat);
+        cockpit.scale.set(1.0, 0.7, 1.8);
+        cockpit.position.set(0, 0.22, 0.25);
+        this.mesh.add(cockpit);
+
+        // --- 2. Slanted Wing Flaps (Indigo & Magenta trims) ---
+        const magentaMat = new THREE.MeshStandardMaterial({
+            color: 0xff0088,
+            roughness: 0.2,
+            metalness: 0.5
+        });
+
+        // Left wing panel
+        const leftWing = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.05, 0.8), bodyMat);
+        leftWing.position.set(-0.65, 0.02, -0.2);
+        leftWing.rotation.y = 0.15;
+        leftWing.rotation.z = -0.05;
+        leftWing.castShadow = true;
+        this.mesh.add(leftWing);
+
+        // Left magenta tip
+        const leftTip = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.06, 0.6), magentaMat);
+        leftTip.position.set(-0.88, 0.01, -0.25);
+        leftTip.rotation.y = 0.15;
+        this.mesh.add(leftTip);
+
+        // Right wing panel
+        const rightWing = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.05, 0.8), bodyMat);
+        rightWing.position.set(0.65, 0.02, -0.2);
+        rightWing.rotation.y = -0.15;
+        rightWing.rotation.z = 0.05;
+        rightWing.castShadow = true;
+        this.mesh.add(rightWing);
+
+        // Right magenta tip
+        const rightTip = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.06, 0.6), magentaMat);
+        rightTip.position.set(0.88, 0.01, -0.25);
+        rightTip.rotation.y = -0.15;
+        this.mesh.add(rightTip);
+
+        // --- 3. Engines & Jet Flames (Magenta/Pink) ---
+        const podGeom = new THREE.CylinderGeometry(0.12, 0.16, 0.55, 12);
+        podGeom.rotateX(Math.PI / 2);
+        const podMat = new THREE.MeshStandardMaterial({ color: 0x1a1d28, roughness: 0.3 });
+
+        // Left Pod
+        const leftPodGroup = new THREE.Group();
+        const leftPod = new THREE.Mesh(podGeom, podMat);
+        leftPod.castShadow = true;
+        leftPodGroup.add(leftPod);
+        leftPodGroup.position.set(-0.65, -0.06, -0.45);
+        this.mesh.add(leftPodGroup);
+        this.thrusters.push(leftPodGroup);
+
+        // Right Pod
+        const rightPodGroup = new THREE.Group();
+        const rightPod = new THREE.Mesh(podGeom, podMat);
+        rightPod.castShadow = true;
+        rightPodGroup.add(rightPod);
+        rightPodGroup.position.set(0.65, -0.06, -0.45);
+        this.mesh.add(rightPodGroup);
+        this.thrusters.push(rightPodGroup);
+
+        // Central exhausts (2 extra nozzles)
+        const leftCenterNozzle = new THREE.Mesh(podGeom, podMat);
+        leftCenterNozzle.position.set(-0.16, -0.1, -0.85);
+        leftCenterNozzle.scale.set(0.8, 0.8, 0.8);
+        this.mesh.add(leftCenterNozzle);
+
+        const rightCenterNozzle = new THREE.Mesh(podGeom, podMat);
+        rightCenterNozzle.position.set(0.16, -0.1, -0.85);
+        rightCenterNozzle.scale.set(0.8, 0.8, 0.8);
+        this.mesh.add(rightCenterNozzle);
+
+        // Volumetric Flames
+        const flameGeom = new THREE.ConeGeometry(0.08, 0.45, 12);
+        flameGeom.rotateX(-Math.PI / 2);
+        const flameMat = new THREE.MeshBasicMaterial({
+            color: 0xff0088,
+            transparent: true,
+            opacity: 0.85
+        });
+
+        // Add flames to pods
+        const leftFlame = new THREE.Mesh(flameGeom, flameMat);
+        leftFlame.position.set(0, 0, -0.38);
+        leftPodGroup.add(leftFlame);
+        this.flameMats.push(flameMat);
+
+        const rightFlame = new THREE.Mesh(flameGeom, flameMat);
+        rightFlame.position.set(0, 0, -0.38);
+        rightPodGroup.add(rightFlame);
+
+        // Central flames
+        const leftCenterFlame = new THREE.Mesh(flameGeom, flameMat);
+        leftCenterFlame.position.set(-0.16, -0.1, -1.2);
+        leftCenterFlame.scale.set(0.6, 0.6, 0.6);
+        this.mesh.add(leftCenterFlame);
+
+        const rightCenterFlame = new THREE.Mesh(flameGeom, flameMat);
+        rightCenterFlame.position.set(0.16, -0.1, -1.2);
+        rightCenterFlame.scale.set(0.6, 0.6, 0.6);
+        this.mesh.add(rightCenterFlame);
+
         // Spotlight
-        const spotLight = new THREE.SpotLight(0xffa500, 8, 40, Math.PI / 4, 0.5, 1);
-        spotLight.position.set(0, 0, 0.68);
+        const spotLight = new THREE.SpotLight(0xff0088, 8, 40, Math.PI / 4, 0.5, 1);
+        spotLight.position.set(0, 0, 0.7);
+        const targetObj = new THREE.Object3D();
+        targetObj.position.set(0, 0, 16);
+        this.mesh.add(targetObj);
+        spotLight.target = targetObj;
+        spotLight.castShadow = true;
+        this.mesh.add(spotLight);
+    }
+
+    buildSolarWingModel() {
+        // --- 1. Organic body fuselage (Slate blue/Indigo) ---
+        const bodyGeom = new THREE.SphereGeometry(0.55, 16, 16);
+        const bodyMat = new THREE.MeshStandardMaterial({
+            color: 0x1b2030,
+            roughness: 0.25,
+            metalness: 0.6,
+            flatShading: false
+        });
+        const fuselage = new THREE.Mesh(bodyGeom, bodyMat);
+        fuselage.scale.set(1.0, 0.6, 2.2);
+        fuselage.position.y = 0.05;
+        fuselage.castShadow = true;
+        fuselage.receiveShadow = true;
+        this.mesh.add(fuselage);
+
+        // Orange nose cone
+        const noseMat = new THREE.MeshStandardMaterial({
+            color: 0xff6a00,
+            roughness: 0.2,
+            metalness: 0.7
+        });
+        const noseGeom = new THREE.ConeGeometry(0.22, 0.45, 12);
+        noseGeom.rotateX(Math.PI / 2);
+        const nose = new THREE.Mesh(noseGeom, noseMat);
+        nose.position.set(0, 0.04, 1.1);
+        this.mesh.add(nose);
+
+        // Sweeping yellow/orange stripes on the fuselage
+        const stripeMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, roughness: 0.1 });
+        const leftStripe = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.02, 1.5), stripeMat);
+        leftStripe.position.set(-0.25, 0.28, 0);
+        leftStripe.rotation.y = 0.08;
+        this.mesh.add(leftStripe);
+
+        const rightStripe = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.02, 1.5), stripeMat);
+        rightStripe.position.set(0.25, 0.28, 0);
+        rightStripe.rotation.y = -0.08;
+        this.mesh.add(rightStripe);
+
+        // --- 2. Sweeping Wings (with downwards pointing orange wingtips) ---
+        // Left wing
+        const leftWing = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.04, 1.1), bodyMat);
+        leftWing.position.set(-0.8, 0.02, -0.1);
+        leftWing.rotation.y = Math.PI / 6;  // sweeps back
+        leftWing.rotation.z = -Math.PI / 24; // slanted slightly down
+        leftWing.castShadow = true;
+        this.mesh.add(leftWing);
+
+        // Left wingtip pointing down
+        const leftTip = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.35, 0.6), noseMat);
+        leftTip.position.set(-1.25, -0.12, -0.32);
+        leftTip.rotation.y = Math.PI / 6;
+        leftTip.rotation.z = -Math.PI / 6;
+        this.mesh.add(leftTip);
+
+        // Right wing
+        const rightWing = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.04, 1.1), bodyMat);
+        rightWing.position.set(0.8, 0.02, -0.1);
+        rightWing.rotation.y = -Math.PI / 6;  // sweeps back
+        rightWing.rotation.z = Math.PI / 24; // slanted slightly down
+        rightWing.castShadow = true;
+        this.mesh.add(rightWing);
+
+        // Right wingtip pointing down
+        const rightTip = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.35, 0.6), noseMat);
+        rightTip.position.set(1.25, -0.12, -0.32);
+        rightTip.rotation.y = -Math.PI / 6;
+        rightTip.rotation.z = Math.PI / 6;
+        this.mesh.add(rightTip);
+
+        // --- 3. Dynamic Engine Thrusters & Flames (Solar Orange) ---
+        const podGeom = new THREE.CylinderGeometry(0.15, 0.18, 0.65, 12);
+        podGeom.rotateX(Math.PI / 2);
+        const podMat = new THREE.MeshStandardMaterial({ color: 0x141822, roughness: 0.3 });
+
+        // Left Pod
+        const leftPodGroup = new THREE.Group();
+        const leftPod = new THREE.Mesh(podGeom, podMat);
+        leftPod.castShadow = true;
+        leftPodGroup.add(leftPod);
+        leftPodGroup.position.set(-0.55, -0.08, -0.65);
+        this.mesh.add(leftPodGroup);
+        this.thrusters.push(leftPodGroup);
+
+        // Right Pod
+        const rightPodGroup = new THREE.Group();
+        const rightPod = new THREE.Mesh(podGeom, podMat);
+        rightPod.castShadow = true;
+        rightPodGroup.add(rightPod);
+        rightPodGroup.position.set(0.55, -0.08, -0.65);
+        this.mesh.add(rightPodGroup);
+        this.thrusters.push(rightPodGroup);
+
+        // Volumetric Flames
+        const flameGeom = new THREE.ConeGeometry(0.1, 0.45, 12);
+        flameGeom.rotateX(-Math.PI / 2);
+        const flameMat = new THREE.MeshBasicMaterial({
+            color: 0xff7700,
+            transparent: true,
+            opacity: 0.85
+        });
+
+        const leftFlame = new THREE.Mesh(flameGeom, flameMat);
+        leftFlame.position.set(0, 0, -0.42);
+        leftPodGroup.add(leftFlame);
+        this.flameMats.push(flameMat);
+
+        const rightFlame = new THREE.Mesh(flameGeom, flameMat);
+        rightFlame.position.set(0, 0, -0.42);
+        rightPodGroup.add(rightFlame);
+
+        // Spotlight
+        const spotLight = new THREE.SpotLight(0xff6a00, 8, 40, Math.PI / 4, 0.5, 1);
+        spotLight.position.set(0, 0.04, 1.1);
+        const targetObj = new THREE.Object3D();
+        targetObj.position.set(0, 0, 16);
+        this.mesh.add(targetObj);
+        spotLight.target = targetObj;
+        spotLight.castShadow = true;
+        this.mesh.add(spotLight);
+    }
+
+    buildCyanDartModel() {
+        // --- 1. Fuselage (Narrow fighter jet body, dark graphite) ---
+        const bodyGeom = new THREE.CylinderGeometry(0.12, 0.35, 2.3, 12);
+        bodyGeom.rotateX(Math.PI / 2);
+        const bodyMat = new THREE.MeshStandardMaterial({
+            color: 0x1c1e24,
+            roughness: 0.2,
+            metalness: 0.8,
+            flatShading: false
+        });
+        const fuselage = new THREE.Mesh(bodyGeom, bodyMat);
+        fuselage.position.y = 0.05;
+        fuselage.castShadow = true;
+        fuselage.receiveShadow = true;
+        this.mesh.add(fuselage);
+
+        // Cyan central dorsal line
+        const cyanMat = new THREE.MeshStandardMaterial({
+            color: 0x00f3ff,
+            emissive: 0x00f3ff,
+            emissiveIntensity: 0.8,
+            roughness: 0.1
+        });
+        const dorsalRidge = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.08, 1.8), cyanMat);
+        dorsalRidge.position.set(0, 0.3, 0.05);
+        this.mesh.add(dorsalRidge);
+
+        // Cockpit dome (Dark visor panel)
+        const cockpit = new THREE.Mesh(
+            new THREE.SphereGeometry(0.18, 16, 16),
+            new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.05, metalness: 0.9 })
+        );
+        cockpit.scale.set(1.0, 0.6, 1.6);
+        cockpit.position.set(0, 0.18, 0.1);
+        this.mesh.add(cockpit);
+
+        // --- 2. Sweeping Side Wings (with cyan tips and stepped wing fins) ---
+        const leftWing = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.03, 0.65), bodyMat);
+        leftWing.position.set(-0.7, 0.02, -0.4);
+        leftWing.rotation.y = Math.PI / 8;
+        leftWing.castShadow = true;
+        this.mesh.add(leftWing);
+
+        // Left cyan wingtip
+        const leftTip = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.04, 0.55), cyanMat);
+        leftTip.position.set(-1.08, 0.02, -0.45);
+        leftTip.rotation.y = Math.PI / 8;
+        this.mesh.add(leftTip);
+
+        const rightWing = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.03, 0.65), bodyMat);
+        rightWing.position.set(0.7, 0.02, -0.4);
+        rightWing.rotation.y = -Math.PI / 8;
+        rightWing.castShadow = true;
+        this.mesh.add(rightWing);
+
+        // Right cyan wingtip
+        const rightTip = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.04, 0.55), cyanMat);
+        rightTip.position.set(1.08, 0.02, -0.45);
+        rightTip.rotation.y = -Math.PI / 8;
+        this.mesh.add(rightTip);
+
+        // Stepped fin panels (3 on left wing edge, 3 on right wing edge)
+        const finGeom = new THREE.BoxGeometry(0.04, 0.14, 0.12);
+        for (let i = 0; i < 3; i++) {
+            const zPos = -0.15 - i * 0.22;
+            const lFin = new THREE.Mesh(finGeom, bodyMat);
+            lFin.position.set(-0.48, 0.08, zPos);
+            lFin.rotation.y = Math.PI / 10;
+            this.mesh.add(lFin);
+
+            const rFin = new THREE.Mesh(finGeom, bodyMat);
+            rFin.position.set(0.48, 0.08, zPos);
+            rFin.rotation.y = -Math.PI / 10;
+            this.mesh.add(rFin);
+        }
+
+        // --- 3. Engine Pods & Flames (Neon Cyan) ---
+        const podGeom = new THREE.CylinderGeometry(0.12, 0.14, 0.6, 12);
+        podGeom.rotateX(Math.PI / 2);
+        const podMat = new THREE.MeshStandardMaterial({ color: 0x14161c, roughness: 0.3 });
+
+        // Left Pod
+        const leftPodGroup = new THREE.Group();
+        const leftPod = new THREE.Mesh(podGeom, podMat);
+        leftPod.castShadow = true;
+        leftPodGroup.add(leftPod);
+        leftPodGroup.position.set(-0.75, -0.06, -0.55);
+        this.mesh.add(leftPodGroup);
+        this.thrusters.push(leftPodGroup);
+
+        // Right Pod
+        const rightPodGroup = new THREE.Group();
+        const rightPod = new THREE.Mesh(podGeom, podMat);
+        rightPod.castShadow = true;
+        rightPodGroup.add(rightPod);
+        rightPodGroup.position.set(0.75, -0.06, -0.55);
+        this.mesh.add(rightPodGroup);
+        this.thrusters.push(rightPodGroup);
+
+        // Main center engine nozzle at tail
+        const centerNozzle = new THREE.Mesh(podGeom, podMat);
+        centerNozzle.position.set(0, -0.05, -1.05);
+        this.mesh.add(centerNozzle);
+
+        // Volumetric Flames
+        const flameGeom = new THREE.ConeGeometry(0.08, 0.45, 12);
+        flameGeom.rotateX(-Math.PI / 2);
+        const flameMat = new THREE.MeshBasicMaterial({
+            color: 0x00f3ff,
+            transparent: true,
+            opacity: 0.85
+        });
+
+        const leftFlame = new THREE.Mesh(flameGeom, flameMat);
+        leftFlame.position.set(0, 0, -0.4);
+        leftPodGroup.add(leftFlame);
+        this.flameMats.push(flameMat);
+
+        const rightFlame = new THREE.Mesh(flameGeom, flameMat);
+        rightFlame.position.set(0, 0, -0.4);
+        rightPodGroup.add(rightFlame);
+
+        const centerFlame = new THREE.Mesh(flameGeom, flameMat);
+        centerFlame.position.set(0, -0.05, -1.45);
+        this.mesh.add(centerFlame);
+
+        // Spotlight
+        const spotLight = new THREE.SpotLight(0x00f3ff, 8, 40, Math.PI / 4, 0.5, 1);
+        spotLight.position.set(0, 0.05, 1.15);
+        const targetObj = new THREE.Object3D();
+        targetObj.position.set(0, 0, 16);
+        this.mesh.add(targetObj);
+        spotLight.target = targetObj;
+        spotLight.castShadow = true;
+        this.mesh.add(spotLight);
+    }
+
+    buildSentinelVModel() {
+        // --- 1. Delta-Wing Body (Charcoal grey triangle structure) ---
+        // Radial segments = 3 creates a perfect low-poly delta wing triangle!
+        const bodyGeom = new THREE.CylinderGeometry(0.02, 1.8, 0.3, 3);
+        bodyGeom.rotateX(Math.PI / 2);
+        bodyGeom.rotateZ(Math.PI); // flips point facing forward
+        const bodyMat = new THREE.MeshStandardMaterial({
+            color: 0x232936, // Deep navy/charcoal grey
+            roughness: 0.25,
+            metalness: 0.7,
+            flatShading: true
+        });
+        const fuselage = new THREE.Mesh(bodyGeom, bodyMat);
+        fuselage.scale.set(1.0, 1.0, 1.3);
+        fuselage.position.set(0, 0.02, 0.15);
+        fuselage.castShadow = true;
+        fuselage.receiveShadow = true;
+        this.mesh.add(fuselage);
+
+        // --- 2. Central Power Core (Glowing blue torus ring + core cylinder) ---
+        const blueCoreMat = new THREE.MeshStandardMaterial({
+            color: 0x0066ff,
+            emissive: 0x0066ff,
+            emissiveIntensity: 1.5,
+            roughness: 0.1
+        });
+        
+        // Torus Ring on top deck
+        const ringGeom = new THREE.TorusGeometry(0.48, 0.05, 8, 24);
+        ringGeom.rotateX(Math.PI / 2);
+        const coreRing = new THREE.Mesh(ringGeom, blueCoreMat);
+        coreRing.position.set(0, 0.16, -0.15);
+        this.mesh.add(coreRing);
+
+        // Core Center circular cooling fan plate
+        const corePlate = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.42, 0.42, 0.02, 16),
+            new THREE.MeshStandardMaterial({ color: 0x0f131a, roughness: 0.6 })
+        );
+        corePlate.position.set(0, 0.15, -0.15);
+        this.mesh.add(corePlate);
+
+        // Symmetrical Wing blue stripes
+        const stripeMat = new THREE.MeshStandardMaterial({ color: 0x00a2ff, roughness: 0.15 });
+        const leftStripe = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.02, 1.1), stripeMat);
+        leftStripe.position.set(-0.55, 0.16, -0.1);
+        leftStripe.rotation.y = Math.PI / 6;
+        this.mesh.add(leftStripe);
+
+        const rightStripe = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.02, 1.1), stripeMat);
+        rightStripe.position.set(0.55, 0.16, -0.1);
+        rightStripe.rotation.y = -Math.PI / 6;
+        this.mesh.add(rightStripe);
+
+        // --- 3. Four Exhaust Nozzles & Blue Flames ---
+        const podGeom = new THREE.CylinderGeometry(0.1, 0.12, 0.5, 12);
+        podGeom.rotateX(Math.PI / 2);
+        const podMat = new THREE.MeshStandardMaterial({ color: 0x11151e, roughness: 0.3 });
+
+        // Left Pod
+        const leftPodGroup = new THREE.Group();
+        const leftPod = new THREE.Mesh(podGeom, podMat);
+        leftPod.castShadow = true;
+        leftPodGroup.add(leftPod);
+        leftPodGroup.position.set(-0.85, -0.06, -0.75);
+        this.mesh.add(leftPodGroup);
+        this.thrusters.push(leftPodGroup);
+
+        // Right Pod
+        const rightPodGroup = new THREE.Group();
+        const rightPod = new THREE.Mesh(podGeom, podMat);
+        rightPod.castShadow = true;
+        rightPodGroup.add(rightPod);
+        rightPodGroup.position.set(0.85, -0.06, -0.75);
+        this.mesh.add(rightPodGroup);
+        this.thrusters.push(rightPodGroup);
+
+        // Two inner center nozzles
+        const leftCenterNozzle = new THREE.Mesh(podGeom, podMat);
+        leftCenterNozzle.position.set(-0.35, -0.06, -0.85);
+        this.mesh.add(leftCenterNozzle);
+
+        const rightCenterNozzle = new THREE.Mesh(podGeom, podMat);
+        rightCenterNozzle.position.set(0.35, -0.06, -0.85);
+        this.mesh.add(rightCenterNozzle);
+
+        // Volumetric Blue Flames
+        const flameGeom = new THREE.ConeGeometry(0.07, 0.42, 12);
+        flameGeom.rotateX(-Math.PI / 2);
+        const flameMat = new THREE.MeshBasicMaterial({
+            color: 0x007eff,
+            transparent: true,
+            opacity: 0.85
+        });
+
+        const leftFlame = new THREE.Mesh(flameGeom, flameMat);
+        leftFlame.position.set(0, 0, -0.35);
+        leftPodGroup.add(leftFlame);
+        this.flameMats.push(flameMat);
+
+        const rightFlame = new THREE.Mesh(flameGeom, flameMat);
+        rightFlame.position.set(0, 0, -0.35);
+        rightPodGroup.add(rightFlame);
+
+        const leftCenterFlame = new THREE.Mesh(flameGeom, flameMat);
+        leftCenterFlame.position.set(-0.35, -0.06, -1.2);
+        this.mesh.add(leftCenterFlame);
+
+        const rightCenterFlame = new THREE.Mesh(flameGeom, flameMat);
+        rightCenterFlame.position.set(0.35, -0.06, -1.2);
+        this.mesh.add(rightCenterFlame);
+
+        // Spotlight
+        const spotLight = new THREE.SpotLight(0x0066ff, 8, 40, Math.PI / 4, 0.5, 1);
+        spotLight.position.set(0, 0.05, 1.0);
         const targetObj = new THREE.Object3D();
         targetObj.position.set(0, 0, 16);
         this.mesh.add(targetObj);

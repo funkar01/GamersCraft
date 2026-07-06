@@ -26,6 +26,19 @@ class AudioEngine {
         this.noiseSource = null;
         this.noiseFilter = null;
         this.noiseGain = null;
+
+        // BGM variables
+        this.bgmVolume = 0.12; // Default subtle ambient volume
+        this.currentBgm = null;
+        this.currentBgmIndex = -1;
+        this.bgmTracks = [
+            'Assets/GameMusic_Audios/Game Music_mickeyscat-moment-of-peace-mickeyscat-554494.mp3',
+            'Assets/GameMusic_Audios/GameMusic_alex-morgan-background-music-545525.mp3',
+            'Assets/GameMusic_Audios/GameMusic_delosound-meditation-relaxing-music-background-320405.mp3',
+            'Assets/GameMusic_Audios/GameMusic_krasnoshchok-background-music-soft-calm-404429.mp3',
+            'Assets/GameMusic_Audios/GameMusic_petrushkasound-relaxation-zen-background-music-461979.mp3',
+            'Assets/GameMusic_Audios/GameMusic_sigmamusicart-relaxing-relax-background-music-537728.mp3'
+        ];
     }
 
     init() {
@@ -64,6 +77,7 @@ class AudioEngine {
             if (this.warpGain) {
                 this.warpGain.gain.setValueAtTime(0, this.ctx?.currentTime || 0);
             }
+            this.stopBgm();
         } else {
             this.init();
             if (this.ctx && this.ctx.state === 'suspended') {
@@ -85,6 +99,55 @@ class AudioEngine {
             } else {
                 this.startDroneSound();
             }
+
+            // Play background music
+            if (this.currentBgm) {
+                this.currentBgm.play().catch(e => console.warn(e));
+            } else {
+                this.playRandomBgm();
+            }
+        }
+    }
+
+    playRandomBgm() {
+        if (this.muted) return;
+        this.stopBgm();
+
+        let nextIndex;
+        do {
+            nextIndex = Math.floor(Math.random() * this.bgmTracks.length);
+        } while (nextIndex === this.currentBgmIndex && this.bgmTracks.length > 1);
+
+        this.currentBgmIndex = nextIndex;
+        const trackUrl = this.bgmTracks[this.currentBgmIndex];
+
+        try {
+            this.currentBgm = new Audio(trackUrl);
+            this.currentBgm.volume = this.bgmVolume;
+            this.currentBgm.play().catch(e => {
+                console.warn("Audio autoplay blocked or track error:", e);
+            });
+
+            this.currentBgm.addEventListener('ended', () => {
+                this.playRandomBgm();
+            });
+        } catch(err) {
+            console.error("Failed to play BGM track:", err);
+        }
+    }
+
+    stopBgm() {
+        if (this.currentBgm) {
+            this.currentBgm.pause();
+            this.currentBgm = null;
+        }
+    }
+
+    setBgmVolume(val) {
+        const cleanVal = Math.max(0, Math.min(1, parseFloat(val)));
+        this.bgmVolume = cleanVal;
+        if (this.currentBgm) {
+            this.currentBgm.volume = cleanVal;
         }
     }
 
