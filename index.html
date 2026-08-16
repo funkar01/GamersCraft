@@ -4,270 +4,531 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Bhanu // 3D Xeno-Explorer Portfolio</title>
-    <meta name="description" content="Explore Bhanu's portfolio as a high-tech hover drone. Glide over alien soil, crash glowing crystals, inspect obsidian monoliths, and transmit contact data. Built with Three.js.">
+    <title>Bhanu Teja — Game Developer & XR Specialist</title>
+    <meta name="description" content="Portfolio of Bhanu Teja. Experience Designer, Game Developer & XR Specialist. Creating interactive worlds where emerging technology meets real human meaning.">
     
+    <!-- Google Fonts: Plus Jakarta Sans (Modern Bold Display) + Space Grotesk + Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@700;800;900&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet">
+    
     <link rel="stylesheet" href="src/style.css">
 </head>
 
-<body>
-    <!-- WebGL Background Canvas -->
+<body class="pro-mode-active">
+    <!-- Custom Magnetic Cursor -->
+    <div id="custom-cursor" class="custom-cursor"></div>
+    <div id="cursor-follower" class="cursor-follower"></div>
+
+    <!-- Mode Warp Transition Overlay -->
+    <div id="mode-transition-warp" class="mode-warp-overlay hidden">
+        <div class="warp-content">
+            <div class="warp-spinner">
+                <div class="spinner-ring"></div>
+                <div class="spinner-core"></div>
+            </div>
+            <div class="warp-mode-label">INITIALIZING TELEMETRY...</div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- PROFESSIONAL STUDIO MODE (Light Mode Reference Blueprint)                 -->
+    <!-- ========================================================================= -->
+    <div id="pro-mode-container" class="pro-master-wrapper">
+        
+        <!-- Floating Mode Switcher Button (Bottom-Right) -->
+        <aside class="floating-mode-pill">
+            <button class="mode-toggle-action floating-btn" data-target-mode="game" title="Launch 3D Xeno-Explorer (Shift+G)">
+                <span class="pulse-dot"></span>
+                <span class="mode-toggle-label">3D GAME MODE</span>
+                <span class="hotkey-badge">⇧G</span>
+            </button>
+        </aside>
+
+        <!-- Clean Minimal Navigation Header -->
+        <header class="pro-header">
+            <div class="pro-header-inner">
+                <a href="#hero" class="brand-logo">
+                    <span class="brand-letter">B</span><span class="brand-square"></span>
+                </a>
+
+                <nav class="pro-nav">
+                    <a href="#works" class="pro-nav-link">Work</a>
+                    <a href="#about" class="pro-nav-link">About</a>
+                    <a href="#labs" class="pro-nav-link">Labs</a>
+                    <a href="#contact" class="pro-nav-link">Contact</a>
+                </nav>
+
+                <div class="pro-header-actions">
+                    <button class="mode-toggle-action header-mode-btn" data-target-mode="game" title="Switch to 3D Game World">
+                        <span class="mode-btn-icon">🕹️</span>
+                        <span>3D Game</span>
+                    </button>
+                    <a href="#contact" class="btn-talk">Let's Talk</a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main>
+            <!-- 1. HERO SECTION (Identical to Reference Image Blueprint) -->
+            <section id="hero" class="hero-section">
+                <div class="hero-container">
+                    
+                    <!-- Left Hero Column: Typography & Bio -->
+                    <div class="hero-left">
+                        <div class="hero-greeting">Hey, I'm</div>
+                        <h1 class="hero-name">
+                            <span class="name-line">Bhanu</span>
+                            <span class="name-line">Teja<span class="green-square"></span></span>
+                        </h1>
+
+                        <div class="hero-role-pill">
+                            <span class="role-dash"></span>
+                            <span class="role-text">GAME DEVELOPER & CREATIVE TECHNOLOGIST</span>
+                        </div>
+
+                        <p class="hero-bio">
+                            Developer specializing in <span class="highlight-box">Unity</span>, <span class="highlight-box">game development</span>, and <span class="highlight-box">XR</span> — building immersive experiences where creativity meets <span class="highlight-box">real-world purpose</span>.
+                        </p>
+
+                        <div class="hero-cta-group">
+                            <a href="#works" class="btn-view-work">
+                                <span>View Work</span>
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    <polyline points="12 5 19 12 12 19"></polyline>
+                                </svg>
+                            </a>
+                            <a href="#about" class="btn-about-me">About Me</a>
+                        </div>
+                    </div>
+
+                    <!-- Right Hero Column: GameIO Mascot (Floating with Light Bars) -->
+                    <div class="hero-right">
+                        <div class="mascot-stage" id="mascot-stage">
+                            <div class="mascot-floating-wrapper">
+                                <img src="images/gameio_mascot.png" alt="GameIO Mascot" class="mascot-img" />
+                                
+                                <!-- Floating Pedestal & Light Bars (matching reference visual) -->
+                                <div class="pedestal-shadow"></div>
+                                <div class="pedestal-light-bars">
+                                    <span class="light-bar"></span>
+                                    <span class="light-bar"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bottom Stats Row (Metrics aligned bottom right) -->
+                <div class="hero-metrics-container">
+                    <div class="metric-block">
+                        <div class="metric-number">4+</div>
+                        <div class="metric-label">Years Designing</div>
+                    </div>
+                    <div class="metric-block">
+                        <div class="metric-number">20+</div>
+                        <div class="metric-label">Projects Built</div>
+                    </div>
+                    <div class="metric-block">
+                        <div class="metric-number">5+</div>
+                        <div class="metric-label">Domains</div>
+                    </div>
+                </div>
+
+                <!-- Continuous Marquee Ticker (matching reference bottom tape) -->
+                <div class="hero-marquee-bar">
+                    <div class="marquee-track">
+                        <span>GAME DEVELOPMENT</span><span class="star-sep">✦</span>
+                        <span>CREATIVE TECHNOLOGIST</span><span class="star-sep">✦</span>
+                        <span>UNITY 3D</span><span class="star-sep">✦</span>
+                        <span>SPATIAL XR</span><span class="star-sep">✦</span>
+                        <span>IMMERSIVE EXPERIENCES</span><span class="star-sep">✦</span>
+                        <span>REAL-TIME 3D</span><span class="star-sep">✦</span>
+                        <span>INTERACTIVE MEDIA</span><span class="star-sep">✦</span>
+                        <span>GAME DEVELOPMENT</span><span class="star-sep">✦</span>
+                        <span>CREATIVE TECHNOLOGIST</span><span class="star-sep">✦</span>
+                        <span>UNITY 3D</span><span class="star-sep">✦</span>
+                        <span>SPATIAL XR</span><span class="star-sep">✦</span>
+                        <span>IMMERSIVE EXPERIENCES</span><span class="star-sep">✦</span>
+                        <span>REAL-TIME 3D</span><span class="star-sep">✦</span>
+                        <span>INTERACTIVE MEDIA</span><span class="star-sep">✦</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. FEATURED WORK SECTION (Exact Lusion Flash Cards) -->
+            <section id="works" class="section works-section">
+                <div class="section-container">
+                    <div class="works-header-row">
+                        <div>
+                            <span class="section-tag">// 01. PORTFOLIO</span>
+                            <h2 class="featured-work-title">Featured Work</h2>
+                        </div>
+                        <p class="featured-work-desc">
+                            A SELECTION OF IMMERSIVE DIGITAL EXPERIENCES CREATED FOR AMBITIOUS BRANDS AND FORWARD THINKING TEAMS.
+                        </p>
+                    </div>
+
+                    <!-- Category Filters -->
+                    <div class="filter-pills">
+                        <button class="filter-pill active" data-filter="all">ALL</button>
+                        <button class="filter-pill" data-filter="xr-spatial">SPATIAL XR</button>
+                        <button class="filter-pill" data-filter="game-dev">GAME ENGINES</button>
+                        <button class="filter-pill" data-filter="webgl-shaders">WEBGL 3D</button>
+                        <button class="filter-pill" data-filter="creative-tech">CREATIVE TECH</button>
+                    </div>
+
+                    <!-- Works Flash Cards Grid -->
+                    <div id="works-grid" class="featured-works-grid">
+                        <!-- Injected dynamically via main.js from CaseStudiesData.js -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. LABS & EXPERIMENTS SECTION -->
+            <section id="labs" class="section">
+                <div class="section-container">
+                    <div class="section-title-wrap">
+                        <span class="section-tag">// 02. R&D EXPERIMENTS</span>
+                        <h2 class="section-title">LABS</h2>
+                    </div>
+
+                    <div class="labs-grid">
+                        <!-- Lab Item 1: 3D Turntable -->
+                        <div class="lab-card lab-card-large">
+                            <div class="lab-header">
+                                <div>
+                                    <span class="lab-pill">3D TURNTABLE</span>
+                                    <h3>Expedition Chassis Inspector</h3>
+                                </div>
+                                <div class="lab-actions">
+                                    <button id="lab-spin-toggle" class="lab-btn active">SPIN</button>
+                                    <button id="lab-wireframe-toggle" class="lab-btn">WIREFRAME</button>
+                                </div>
+                            </div>
+                            <div class="lab-canvas-wrap">
+                                <div id="lab-drone-canvas" class="lab-canvas"></div>
+                                <span class="lab-drag-hint">DRAG TO ORBIT // SCROLL TO ZOOM</span>
+                            </div>
+                            <div class="chassis-selector">
+                                <button class="chassis-chip active" data-drone="cyan-dart">CYAN-DART</button>
+                                <button class="chassis-chip" data-drone="swift-z">SWIFT-Z</button>
+                                <button class="chassis-chip" data-drone="interceptor-gl">INTERCEPTOR</button>
+                                <button class="chassis-chip" data-drone="valkyrie-x">VALKYRIE-X</button>
+                                <button class="chassis-chip" data-drone="solar-wing">SOLAR-WING</button>
+                                <button class="chassis-chip" data-drone="sentinel-v">SENTINEL-V</button>
+                                <button class="chassis-chip" data-drone="xeno-cargo">XENO-CARGO</button>
+                                <button class="chassis-chip" data-drone="default">EXP-01</button>
+                            </div>
+                        </div>
+
+                        <!-- Lab Item 2: Fluid Particle Swarm -->
+                        <div class="lab-card">
+                            <div class="lab-header">
+                                <div>
+                                    <span class="lab-pill">KINETIC SIMULATION</span>
+                                    <h3>Fluid Curl Vortex</h3>
+                                </div>
+                                <button id="lab-particle-reset" class="lab-btn">PULSE</button>
+                            </div>
+                            <div class="lab-2d-canvas-wrap">
+                                <canvas id="lab-vortex-canvas"></canvas>
+                                <span class="lab-drag-hint">MOVE CURSOR TO REPEL</span>
+                            </div>
+                        </div>
+
+                        <!-- Lab Item 3: Web Audio Synth -->
+                        <div class="lab-card">
+                            <div class="lab-header">
+                                <div>
+                                    <span class="lab-pill">WEB AUDIO API</span>
+                                    <h3>Harmonic Synth Pad</h3>
+                                </div>
+                            </div>
+                            <div class="synth-pad-grid">
+                                <button class="synth-key" data-freq="220"><span>A3</span></button>
+                                <button class="synth-key" data-freq="277.18"><span>C#4</span></button>
+                                <button class="synth-key" data-freq="329.63"><span>E4</span></button>
+                                <button class="synth-key" data-freq="415.30"><span>G#4</span></button>
+                                <button class="synth-key" data-freq="440"><span>A4</span></button>
+                                <button class="synth-key" data-freq="554.37"><span>C#5</span></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. ABOUT & CAPABILITIES SECTION -->
+            <section id="about" class="section">
+                <div class="section-container">
+                    <div class="section-title-wrap">
+                        <span class="section-tag">// 03. STUDIO & CAPABILITIES</span>
+                        <h2 class="section-title">ABOUT</h2>
+                    </div>
+
+                    <div class="about-grid">
+                        <div class="about-statement">
+                            <h3>At the intersection of engineering rigor and artistic wonder.</h3>
+                            <p>
+                                I specialize in crafting real-time interactive systems with seamless performance. From multi-threaded C++ physics engines and visionOS spatial applications to high-performance WebGL universes.
+                            </p>
+                        </div>
+
+                        <div class="capabilities-column">
+                            <div class="cap-group">
+                                <h4>GAME ENGINES</h4>
+                                <p>Unreal Engine 5 • Unity 3D • Godot • C++ • C# • Physics Sim</p>
+                            </div>
+                            <div class="cap-group">
+                                <h4>SPATIAL XR</h4>
+                                <p>Apple Vision Pro • Meta Quest 3 • OpenXR • Hand Tracking • Spatial Audio</p>
+                            </div>
+                            <div class="cap-group">
+                                <h4>GRAPHICS & WEBGL</h4>
+                                <p>GLSL / HLSL • Compute Shaders • Three.js • WebXR • Niagara VFX</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 5. CONTACT SECTION -->
+            <section id="contact" class="section contact-section">
+                <div class="section-container">
+                    <div class="contact-wrap">
+                        <span class="section-tag">// 04. GET IN TOUCH</span>
+                        <h2 class="contact-headline">LET'S BUILD SOMETHING EXTRAORDINARY.</h2>
+                        
+                        <div class="email-cta">
+                            <a href="mailto:hello@gamerscraft.com" id="direct-email-link" class="huge-email">hello@gamerscraft.com</a>
+                            <button id="copy-email-btn" class="copy-pill">
+                                <span id="copy-feedback">COPY EMAIL</span>
+                            </button>
+                        </div>
+
+                        <!-- Interactive Quick Comms Action -->
+                        <div class="contact-comms-row">
+                            <button class="btn-talk gg-comms-btn">
+                                <span class="comms-pulse-dot"></span>
+                                <span>⚡ DROP A GG / BOOK A 15-MIN SYNC</span>
+                                <span class="comms-xp-tag">+100 XP</span>
+                            </button>
+                        </div>
+
+                        <div class="contact-footer-info">
+                            <div class="status-item">
+                                <span class="status-dot"></span>
+                                <span>AVAILABLE FOR SELECT PROJECTS</span>
+                            </div>
+                            <div class="clock-item">
+                                <span id="live-studio-clock">UTC+5:30 // 15:30</span>
+                            </div>
+                            <div class="social-row">
+                                <a href="https://github.com" target="_blank" rel="noopener">GITHUB</a>
+                                <a href="https://linkedin.com" target="_blank" rel="noopener">LINKEDIN</a>
+                                <a href="https://twitter.com" target="_blank" rel="noopener">TWITTER</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Studio Minimal Footer -->
+        <footer class="pro-footer">
+            <div class="footer-container">
+                <span>BHANU TEJA // GAMERSCRAFT © 2026</span>
+                <button class="mode-toggle-action footer-link" data-target-mode="game">SWITCH TO 3D GAME MODE 🕹️</button>
+                <a href="#hero" class="footer-link">BACK TO TOP ↑</a>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- CASE STUDY DRAWER MODAL                                                   -->
+    <!-- ========================================================================= -->
+    <div id="case-study-drawer" class="case-study-drawer hidden" aria-hidden="true">
+        <div class="drawer-backdrop" id="drawer-backdrop"></div>
+        <div class="drawer-panel">
+            <button id="drawer-close-btn" class="drawer-close-btn">×</button>
+            <div id="drawer-content" class="drawer-content-scroll"></div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- PRESERVED 3D GAME MODE (Canvas & HUD)                                     -->
+    <!-- ========================================================================= -->
     <div id="canvas-container"></div>
-    
-    <!-- Retro Scanline Scan Layer -->
     <div class="scanlines"></div>
 
-    <!-- HUD Overlay elements -->
-    <div id="game-hud">
-        <!-- Top Navigation Header -->
+    <div id="game-hud" class="hidden">
         <header id="game-header">
-            <div class="logo">Bhanu <span class="logo-mode">// XENO_EXPLORER v2.0</span></div>
+            <div class="logo">Bhanu Teja <span class="logo-mode">// XENO_EXPLORER</span></div>
             <nav class="hud-nav">
                 <a href="#welcome" class="hud-nav-item" data-target="welcome">WELCOME</a>
-                <a href="#about" class="hud-nav-item" data-target="about">BIO_BOARD</a>
+                <a href="#about" class="hud-nav-item" data-target="about">BIO</a>
                 <a href="#quests" class="hud-nav-item" data-target="quests">MONOLITHS</a>
-                <a href="#skills" class="hud-nav-item" data-target="skills">SKILLS_NODE</a>
-                <a href="#contact" class="hud-nav-item" data-target="contact">BEACON_TOWER</a>
+                <a href="#skills" class="hud-nav-item" data-target="skills">SKILLS</a>
+                <a href="#contact" class="hud-nav-item" data-target="contact">BEACON</a>
             </nav>
             <div class="hud-header-actions">
-                <button id="hud-sound-toggle" class="sound-toggle-btn" title="Toggle Game Audio">
-                    <svg id="sound-on-svg" viewBox="0 0 24 24" width="18" height="18">
-                        <path fill="currentColor" d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18.03,19.86 21,16.28 21,12C21,7.72 18.03,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.77 16.5,12M3,9V15H7L12,20V4L7,9H3Z"/>
+                <button class="mode-toggle-action hud-mode-btn" data-target-mode="pro">💼 PRO MODE</button>
+                <button id="hud-sound-toggle" class="sound-toggle-btn" title="Toggle Sound">
+                    <svg id="sound-on-svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                        <path d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18.03,19.86 21,16.28 21,12C21,7.72 18.03,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.77 16.5,12M3,9V15H7L12,20V4L7,9H3Z"/>
                     </svg>
-                    <svg id="sound-off-svg" viewBox="0 0 24 24" width="18" height="18" class="hidden-icon">
-                        <path fill="currentColor" d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.44 14,18.7V20.76C15.38,20.44 16.63,19.78 17.68,18.95L20,21.27L21.27,20L4.27,3M19,12C19,12.94 18.8,13.82 18.46,14.64L19.97,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18.03,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.63C16.48,12.43 16.5,12.22 16.5,12Z"/>
+                    <svg id="sound-off-svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" class="hidden-icon">
+                        <path d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.44 14,18.7V20.76C15.38,20.44 16.63,19.78 17.68,18.95L20,21.27L21.27,20L4.27,3M19,12C19,12.94 18.8,13.82 18.46,14.64L19.97,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18.03,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.63C16.48,12.43 16.5,12.22 16.5,12Z"/>
                     </svg>
                 </button>
-                <button id="hud-settings-toggle" class="settings-toggle-btn" title="Open Game Settings">
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-                        <path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/>
-                    </svg>
+                <button id="hud-settings-toggle" class="settings-toggle-btn" title="Settings">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/></svg>
                 </button>
             </div>
         </header>
 
-        <!-- Dynamic Information Popup Panel -->
         <div id="info-overlay" class="hud-popup-card hidden">
             <button class="popup-close-btn" id="popup-close">×</button>
-            <div id="popup-content">
-                <!-- Injected dynamically via main.js -->
-            </div>
+            <div id="popup-content"></div>
         </div>
 
-        <!-- How To Play Overlay (Instructions Widget) -->
         <div id="instructions-card" class="hud-instructions">
-            <h3>DRONE TELEMETRY MANUAL</h3>
+            <h3>DRONE TELEMETRY</h3>
             <div class="controls-list">
-                <div class="control-row">
-                    <span class="control-key">W</span> <span class="control-key">S</span> / <span class="control-key">↑</span> <span class="control-key">↓</span>
-                    <span class="control-desc">Thrust Forward / Back</span>
-                </div>
-                <div class="control-row">
-                    <span class="control-key">A</span> <span class="control-key">D</span> / <span class="control-key">←</span> <span class="control-key">→</span>
-                    <span class="control-desc">Hover Yaw Steer</span>
-                </div>
+                <div class="control-row"><span class="control-key">W</span><span class="control-key">S</span> Thrust</div>
+                <div class="control-row"><span class="control-key">A</span><span class="control-key">D</span> Steer</div>
             </div>
-            <ul class="manual-tips">
-                <li>Glide over floating magnetic ramps to jump</li>
-                <li>Crash into glowing xeno-crystals to shatter them</li>
-                <li>Approach obsidian monoliths to read logs</li>
-                <li>Enter the radar circle (back) to establish link</li>
-            </ul>
-            <button id="close-instructions-btn" class="manual-close-btn">DISMISS MANUAL</button>
+            <button id="close-instructions-btn" class="manual-close-btn">DISMISS</button>
         </div>
 
-        <!-- Trigger Zone Status Indicator (Bottom Center HUD) -->
         <div id="hud-zone-indicator" class="hud-status-indicator hidden">
             <span class="indicator-led pulsing"></span>
-            <span id="indicator-text">APPROACHING PROJECT GATEWAY...</span>
+            <span id="indicator-text">APPROACHING GATEWAY...</span>
         </div>
 
-        <!-- Mobile Touch Controls overlay (D-Pad layout) -->
         <div id="mobile-dpad" class="mobile-controls-container">
             <div class="dpad-column">
-                <button id="mobile-steer-left" class="dpad-btn steer-btn">◀</button>
+                <button id="mobile-steer-left" class="dpad-btn">◀</button>
                 <div class="dpad-drive-group">
-                    <button id="mobile-drive-up" class="dpad-btn drive-btn">▲</button>
-                    <button id="mobile-drive-down" class="dpad-btn drive-btn">▼</button>
+                    <button id="mobile-drive-up" class="dpad-btn">▲</button>
+                    <button id="mobile-drive-down" class="dpad-btn">▼</button>
                 </div>
-                <button id="mobile-steer-right" class="dpad-btn steer-btn">▶</button>
+                <button id="mobile-steer-right" class="dpad-btn">▶</button>
             </div>
         </div>
     </div>
 
-    <!-- Hidden elements for dynamic overlay content formatting -->
+    <!-- Hidden Game Project Templates -->
     <div id="project-templates" class="hidden">
-        <!-- Portal Showcase template -->
         <div id="template-portal">
-            <span class="popup-badge text-cyan">PORTAL DIODE // PROJECT SCANNER</span>
-            
-            <div id="portal-project-details" style="margin-top: 15px;">
-                <!-- Injected dynamically via main.js -->
-            </div>
-            
-            <!-- Navigation Controls -->
-            <div class="portal-controls" style="display: flex; justify-content: space-between; align-items: center; margin-top: 25px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 15px;">
-                <button id="portal-prev-btn" class="popup-link-btn border-cyan" style="width: 38%; margin: 0; padding: 8px; font-size: 0.6rem;">◀ PREV</button>
-                <div id="portal-project-indicator" style="font-family: var(--font-heading); font-size: 0.75rem; font-weight: 700; color: var(--color-cyan);">1 / 3</div>
-                <button id="portal-next-btn" class="popup-link-btn border-cyan" style="width: 38%; margin: 0; padding: 8px; font-size: 0.6rem;">NEXT ▶</button>
+            <span class="popup-badge text-cyan">PORTAL DIODE</span>
+            <div id="portal-project-details" style="margin-top: 15px;"></div>
+            <div class="portal-controls" style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 15px;">
+                <button id="portal-prev-btn" class="popup-link-btn border-cyan">◀ PREV</button>
+                <div id="portal-project-indicator" style="font-family: var(--font-heading); font-weight: 700; color: var(--color-cyan);">1 / 3</div>
+                <button id="portal-next-btn" class="popup-link-btn border-cyan">NEXT ▶</button>
             </div>
         </div>
 
-        <!-- Neon Racer template -->
         <div id="template-neon">
             <span class="popup-badge text-green">MONOLITH // NEON RACER</span>
             <h2>Neon Racer</h2>
-            <p>An adrenaline-fueled cyberpunk racing simulation. Programmed custom hover thruster physics, procedural track generation meshes, and responsive vector math in Unity Engine.</p>
-            <div class="popup-tags">
-                <span class="tag">Unity 3D</span>
-                <span class="tag">C# Cores</span>
-                <span class="tag">Physics Vector</span>
-                <span class="tag">Procedural Track</span>
-            </div>
-            <a href="https://github.com" target="_blank" class="popup-link-btn border-green">Inspect Git Repository</a>
+            <p>An adrenaline-fueled cyberpunk racing simulation with custom hover thruster physics in Unity Engine.</p>
+            <a href="https://github.com" target="_blank" class="popup-link-btn border-green">View Repository</a>
         </div>
 
-        <!-- Void Walker template -->
         <div id="template-void">
             <span class="popup-badge text-pink">MONOLITH // VOID WALKER</span>
             <h2>Void Walker</h2>
-            <p>An atmospheric platformer exploring dimension shifting. Implemented a robust 2D physics parser, gravitational vector shifts, and custom shader displacement fields in Godot.</p>
-            <div class="popup-tags">
-                <span class="tag">Godot Engine</span>
-                <span class="tag">GDScript</span>
-                <span class="tag">Gravity Math</span>
-                <span class="tag">Canvas Shaders</span>
-            </div>
-            <a href="https://github.com" target="_blank" class="popup-link-btn border-pink">Inspect Git Repository</a>
+            <p>An atmospheric platformer exploring dimension shifting with gravity vector math in Godot.</p>
+            <a href="https://github.com" target="_blank" class="popup-link-btn border-pink">View Repository</a>
         </div>
 
-        <!-- Cyber Defense template -->
         <div id="template-defense">
             <span class="popup-badge text-cyan">MONOLITH // CYBER DEFENSE</span>
             <h2>Cyber Defense</h2>
-            <p>A procedural tactical mainframe defense game. Architected custom pathfinding grids, optimized volumetric laser beam rendering, and multi-threaded AI agent waves in Unreal 5.</p>
-            <div class="popup-tags">
-                <span class="tag">Unreal Engine 5</span>
-                <span class="tag">C++ Systems</span>
-                <span class="tag">AI Navigation</span>
-                <span class="tag">Volumetric VFX</span>
-            </div>
-            <a href="https://github.com" target="_blank" class="popup-link-btn border-cyan">Inspect Git Repository</a>
+            <p>A procedural tactical mainframe defense game with multi-threaded AI agent waves in Unreal 5.</p>
+            <a href="https://github.com" target="_blank" class="popup-link-btn border-cyan">View Repository</a>
         </div>
 
-        <!-- Contact form template -->
         <div id="template-contact">
-            <span class="popup-badge text-cyan">BEACON LINK INITIATOR</span>
+            <span class="popup-badge text-cyan">BEACON TRANSCEIVER</span>
             <h2>Establish Link</h2>
-            <p>Ready to collaborate on physics simulations, WebGL rendering architectures, or interactive game engines. Initiate transceiver socket connection.</p>
-            <a href="mailto:hello@gamerscraft.com" class="popup-link-btn border-cyan glow-cyan" style="margin-bottom: 15px;">TRANSMIT INQUIRY</a>
-            <div class="popup-socials">
-                <a href="https://github.com" target="_blank">GITHUB</a>
-                <a href="https://linkedin.com" target="_blank">LINKEDIN</a>
-                <a href="https://twitter.com" target="_blank">TWITTER</a>
-            </div>
+            <p>Ready to collaborate on physics simulations, WebGL architectures, or game engines.</p>
+            <a href="mailto:hello@gamerscraft.com" class="popup-link-btn border-cyan glow-cyan">TRANSMIT INQUIRY</a>
         </div>
     </div>
 
-    <!-- Settings Modal Panel -->
+    <!-- Preserved Settings Modal for Game Mode -->
     <div id="settings-overlay" class="hud-popup-card hidden">
         <button class="popup-close-btn" id="settings-close">×</button>
         <div id="settings-content">
             <span class="popup-badge text-cyan">SETTINGS // SYSTEM CALIBRATION</span>
             <h2 style="margin-bottom: 20px;">System Settings</h2>
             
-            <!-- Volume Control Section -->
             <div class="settings-section">
-                <h3>AUDIO SYNTHESIZER VOLUME</h3>
+                <h3>AUDIO VOLUME</h3>
                 <div class="volume-slider-container">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                        <path d="M3,9V15H7L12,20V4L7,9H3Z"/>
-                    </svg>
                     <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.3">
                     <span id="volume-percent">30%</span>
                 </div>
             </div>
 
-            <!-- BGM Music Control Section -->
             <div class="settings-section">
-                <h3>BACKGROUND MUSIC VOLUME</h3>
+                <h3>MUSIC VOLUME</h3>
                 <div class="volume-slider-container">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                        <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-                    </svg>
                     <input type="range" id="music-slider" min="0" max="1" step="0.01" value="0.12">
                     <span id="music-percent">12%</span>
                 </div>
             </div>
 
-            <!-- Environmental Light Control Section -->
             <div class="settings-section">
-                <h3>ENVIRONMENTAL LIGHT INTENSITY</h3>
+                <h3>ENVIRONMENT LIGHT</h3>
                 <div class="volume-slider-container">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                        <path d="M12, 18C11.11, 18 10.26, 17.8 9.5, 17.45C11.56, 16.5 13, 14.42 13, 12C13, 9.58 11.56, 7.5 9.5, 6.55C10.26, 6.2 11.11, 6 12, 6A6, 6 0 0, 1 18, 12A6, 6 0 0, 1 12, 18M20, 8.69V4H15.31L12, 0.69L8.69, 4H4V8.69L0.69, 12L4, 15.31V20H8.69L12, 23.31L15.31, 20H20V15.31L23.31, 12L20, 8.69Z"/>
-                    </svg>
                     <input type="range" id="light-slider" min="0.1" max="2.5" step="0.05" value="1.0">
                     <span id="light-percent">100%</span>
                 </div>
             </div>
 
-            <!-- Drone Selection Section -->
             <div class="settings-section">
-                <h3>SELECT EXPEDITION CHASSIS</h3>
-                
+                <h3>TIME OF DAY</h3>
+                <div class="preset-selector-container">
+                    <button class="preset-btn active" data-preset="afternoon">☀️ Afternoon</button>
+                    <button class="preset-btn" data-preset="morning">🌅 Sunrise</button>
+                    <button class="preset-btn" data-preset="evening">🌇 Evening</button>
+                    <button class="preset-btn" data-preset="night">🌙 Night</button>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3>EXPEDITION CHASSIS</h3>
                 <div class="drone-selector-layout">
-                    <!-- Left side: Drone description list -->
                     <div class="drone-list">
-                        <div class="drone-option active" data-drone="default">
-                            <div class="option-name">EXP-01 CORE</div>
-                            <div class="option-desc">Standard orbital torus chassis. Reliable, balanced power.</div>
-                        </div>
-                        <div class="drone-option" data-drone="swift-z">
-                            <div class="option-name">SWIFT-Z SPORT</div>
-                            <div class="option-desc">High agility, orange shield trim, yellow wings & green flame.</div>
-                        </div>
-                        <div class="drone-option" data-drone="interceptor-gl">
-                            <div class="option-name">INTERCEPTOR-GL</div>
-                            <div class="option-desc">Sleek green/white aero build, glowing torus energy core.</div>
-                        </div>
-                        <div class="drone-option" data-drone="xeno-cargo">
-                            <div class="option-name">XENO-CARGO MK2</div>
-                            <div class="option-desc">Blocky military teal frame with heavy wingtip rotators.</div>
-                        </div>
-                        <div class="drone-option" data-drone="valkyrie-x">
-                            <div class="option-name">VALKYRIE-X</div>
-                            <div class="option-desc">Aerodynamic indigo fuselage with hot-pink wingtips & 6 exhausts.</div>
-                        </div>
-                        <div class="drone-option" data-drone="solar-wing">
-                            <div class="option-name">SOLAR-WING PHOENIX</div>
-                            <div class="option-desc">Swept orange-tipped wings, aerodynamic nose & twin orange flames.</div>
-                        </div>
-                        <div class="drone-option" data-drone="cyan-dart">
-                            <div class="option-name">CYAN-DART JET</div>
-                            <div class="option-desc">Slim stealth frame with cyan dorsal ridge and multi-nozzle engines.</div>
-                        </div>
-                        <div class="drone-option" data-drone="sentinel-v">
-                            <div class="option-name">SENTINEL-V DELTA</div>
-                            <div class="option-desc">Futuristic delta-wing chassis featuring a central blue core ring.</div>
-                        </div>
+                        <div class="drone-option active" data-drone="cyan-dart"><div class="option-name">CYAN-DART</div></div>
+                        <div class="drone-option" data-drone="swift-z"><div class="option-name">SWIFT-Z</div></div>
+                        <div class="drone-option" data-drone="interceptor-gl"><div class="option-name">INTERCEPTOR</div></div>
+                        <div class="drone-option" data-drone="valkyrie-x"><div class="option-name">VALKYRIE-X</div></div>
+                        <div class="drone-option" data-drone="solar-wing"><div class="option-name">SOLAR-WING</div></div>
+                        <div class="drone-option" data-drone="sentinel-v"><div class="option-name">SENTINEL-V</div></div>
+                        <div class="drone-option" data-drone="xeno-cargo"><div class="option-name">XENO-CARGO</div></div>
+                        <div class="drone-option" data-drone="default"><div class="option-name">EXP-01</div></div>
                     </div>
-                    
-                    <!-- Right side: 3D Preview Frame -->
                     <div class="drone-preview-container">
                         <div id="drone-preview-canvas-container"></div>
-                        <div class="preview-hint">DRAG TO ROTATE // SCROLL TO ZOOM</div>
                     </div>
                 </div>
-                
-                <button id="apply-drone-btn" class="popup-link-btn border-cyan glow-cyan" style="margin-top: 20px;">DEPLOY CHASSIS</button>
+                <button id="apply-drone-btn" class="popup-link-btn border-cyan glow-cyan" style="margin-top: 16px;">DEPLOY CHASSIS</button>
             </div>
         </div>
     </div>
 
+    <!-- Cloudflare Web Analytics (Optional: Enabled automatically on Cloudflare Pages Dashboard or use token below) -->
+    <!-- <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "YOUR_CLOUDFLARE_ANALYTICS_TOKEN"}'></script> -->
+
+    <!-- Main JavaScript Entrypoint -->
     <script type="module" src="src/main.js"></script>
 </body>
 

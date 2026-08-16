@@ -44,6 +44,18 @@ export class XenoWorld {
         this.sporePositions = [];
         this.sporeVelocities = [];
 
+        // Culling Entity Lists
+        this.spireMeshes = [];
+        this.boulderMeshes = [];
+        this.pebbleMeshes = [];
+        this.puddleMeshes = [];
+        this.flowers = [];
+        this.trees = [];
+        this.signGroups = [];
+        this.portalGroup = null;
+        this.beaconGroup = null;
+        this.contactCircle = null;
+
         this.onEnterZone = () => {};
         
         this.init();
@@ -56,14 +68,14 @@ export class XenoWorld {
         canvas.height = 128;
         const ctx = canvas.getContext('2d');
         
-        ctx.fillStyle = '#1b2d2d';
+        ctx.fillStyle = '#ffffff'; // White base (multiplies vertex colors)
         ctx.fillRect(0, 0, 128, 128);
         
-        ctx.strokeStyle = 'rgba(30, 144, 255, 0.25)'; // Sky Blue #1E90FF
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.14)'; // Subtle dark grid overlay
         ctx.lineWidth = 2;
         ctx.strokeRect(0, 0, 128, 128);
         
-        ctx.strokeStyle = 'rgba(0, 255, 127, 0.12)'; // Bright Green #00FF7F
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)'; // Subtle highlight
         ctx.lineWidth = 1;
         ctx.strokeRect(32, 32, 64, 64);
         
@@ -76,41 +88,62 @@ export class XenoWorld {
         const groundGeom = new THREE.PlaneGeometry(250, 250, 96, 96);
         
         const posAttr = groundGeom.attributes.position;
+        const colorsAttr = [];
+        const grassColor = new THREE.Color(0x55a630); // Vibrant grass green
+        const soilColor = new THREE.Color(0xd68d53);  // Warm orange-brown soil
+        
         for (let i = 0; i < posAttr.count; i++) {
             const vx = posAttr.getX(i);
             const vy = posAttr.getY(i);
             const heightVal = getTerrainHeight(vx, vy);
             posAttr.setZ(i, heightVal);
+            
+            // Winding path formula: snaking along the Y axis of the plane (which is Z in world)
+            const pathX = Math.sin(vy * 0.06) * 12.0 + Math.sin(vy * 0.02) * 6.0;
+            const distToPath = Math.abs(vx - pathX);
+            const distToCenter = Math.sqrt(vx * vx + vy * vy);
+            
+            let color = grassColor.clone();
+            
+            if (distToCenter <= 8.5) {
+                // Center plaza is soil
+                color.copy(soilColor);
+            } else {
+                if (distToPath < 3.8) {
+                    color.copy(soilColor);
+                } else if (distToPath < 7.5) {
+                    // Smooth transition blend
+                    const t = (distToPath - 3.8) / 3.7;
+                    color.lerpColors(soilColor, grassColor, t);
+                }
+            }
+            colorsAttr.push(color.r, color.g, color.b);
         }
         
+        groundGeom.setAttribute('color', new THREE.Float32BufferAttribute(colorsAttr, 3));
         groundGeom.computeVertexNormals();
 
         const groundMat = new THREE.MeshStandardMaterial({
             map: gridTexture,
+            vertexColors: true,
             roughness: 0.9,
-            metalness: 0.3
+            metalness: 0.1,
+            flatShading: true
         });
         const ground = new THREE.Mesh(groundGeom, groundMat);
         ground.rotation.x = -Math.PI / 2;
         ground.receiveShadow = true;
         this.group.add(ground);
 
-        // --- Stylized Stacked Plateaus & Spire Rocks ---
+        // --- Stylized Stacked Plateaus & Spire Rocks (Slate Grey) ---
         const plateauMat = new THREE.MeshStandardMaterial({
-            color: 0x140e28, // Deep violet rock matching sky
+            color: 0x94a3b8, // Light slate-grey matching the boulders
             roughness: 0.85,
-            metalness: 0.2,
+            metalness: 0.25,
             flatShading: true
         });
 
-        const neonPinkMat = new THREE.MeshBasicMaterial({
-            color: 0xff00ff,
-            transparent: true,
-            opacity: 0.85,
-            blending: THREE.AdditiveBlending
-        });
-
-        // Function to create a stacked stone plateau with neon pink under-glow
+        // Function to create a stacked stone plateau (no neon rings for cartoon daylight look)
         const createStackedPlateau = (px, pz, scaleFactor = 1.0) => {
             const group = new THREE.Group();
             const gy = getTerrainHeight(px, pz);
@@ -123,13 +156,6 @@ export class XenoWorld {
             slab1.castShadow = true;
             slab1.receiveShadow = true;
             group.add(slab1);
-            
-            // Neon pink under-glow ring between slab 1 and slab 2
-            const glow1Geom = new THREE.TorusGeometry(4.2 * scaleFactor, 0.12, 4, 16);
-            glow1Geom.rotateX(Math.PI / 2);
-            const glow1 = new THREE.Mesh(glow1Geom, neonPinkMat);
-            glow1.position.y = 1.2;
-            group.add(glow1);
 
             // Layer 2 (Middle slab)
             const slab2Geom = new THREE.CylinderGeometry(3.5 * scaleFactor, 4.2 * scaleFactor, 0.9, 5);
@@ -139,13 +165,6 @@ export class XenoWorld {
             slab2.castShadow = true;
             slab2.receiveShadow = true;
             group.add(slab2);
-
-            // Neon pink under-glow ring between slab 2 and slab 3
-            const glow2Geom = new THREE.TorusGeometry(2.8 * scaleFactor, 0.1, 4, 16);
-            glow2Geom.rotateX(Math.PI / 2);
-            const glow2 = new THREE.Mesh(glow2Geom, neonPinkMat);
-            glow2.position.y = 2.1;
-            group.add(glow2);
 
             // Layer 3 (Top slab)
             const slab3Geom = new THREE.CylinderGeometry(2.2 * scaleFactor, 2.8 * scaleFactor, 0.7, 5);
@@ -184,6 +203,7 @@ export class XenoWorld {
             spire.castShadow = true;
             spire.receiveShadow = true;
             this.group.add(spire);
+            this.spireMeshes.push(spire);
         };
 
         // Spawn 15 towering spire rocks around the horizon landscape
@@ -201,7 +221,7 @@ export class XenoWorld {
 
         // --- 3. Blocky Grey Boulders (Slate Obstacles) ---
         const boulderGeom = new THREE.IcosahedronGeometry(2.0, 0); // 0 subdivision = very blocky
-        const boulderMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.9, flatShading: true });
+        const boulderMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.9, flatShading: true });
         
         const boulderSpawns = [
             { x: -15, z: 25 }, { x: -35, z: -10 }, { x: 30, z: -25 },
@@ -224,12 +244,13 @@ export class XenoWorld {
             mesh.castShadow = true;
             mesh.receiveShadow = true;
             this.group.add(mesh);
+            this.boulderMeshes.push(mesh);
         });
 
         // --- 4. Scattered Ground Pebbles & Small Crystals ---
         const rockGeom = new THREE.DodecahedronGeometry(0.2, 0);
         const pebbleGeom = new THREE.BoxGeometry(0.3, 0.15, 0.3);
-        const rockMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.9 });
+        const rockMat = new THREE.MeshStandardMaterial({ color: 0x708090, roughness: 0.9 });
         
         const crystalGlowMat = new THREE.MeshStandardMaterial({
             color: 0x00f0ff,
@@ -259,18 +280,17 @@ export class XenoWorld {
             detailMesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
             detailMesh.castShadow = true;
             this.group.add(detailMesh);
+            this.pebbleMeshes.push(detailMesh);
         }
 
-        // --- 5. Bioluminescent Water Puddles (Valleys) ---
+        // --- 5. Calm Clear Water Puddles (Valleys) ---
         const waterGeom = new THREE.CircleGeometry(3.8, 16);
         const waterMat = new THREE.MeshStandardMaterial({
-            color: 0x00f0ff,
-            emissive: 0x005c8a,
-            emissiveIntensity: 0.5,
+            color: 0x56ccf2, // Sky blue cartoon water
             transparent: true,
-            opacity: 0.6,
+            opacity: 0.82,
             roughness: 0.05,
-            metalness: 0.95
+            metalness: 0.1
         });
 
         // Placed in major valleys
@@ -288,6 +308,7 @@ export class XenoWorld {
             puddle.position.set(c.x, gy + 0.05, c.z); // offset slightly above ground
             puddle.receiveShadow = true;
             this.group.add(puddle);
+            this.puddleMeshes.push(puddle);
         });
 
         // --- 6. Floating Magnetic Ramps ---
@@ -335,7 +356,7 @@ export class XenoWorld {
         const mushTrunkGeom = new THREE.CylinderGeometry(0.1, 0.2, 1.2, 5);
         const mushCapGeom = new THREE.SphereGeometry(0.8, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2);
         
-        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x181824, roughness: 0.8 });
+        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b, roughness: 0.85 }); // Warm natural wood brown
         const capMat = new THREE.MeshStandardMaterial({
             color: 0xff0055,
             emissive: 0xff0055,
@@ -372,30 +393,179 @@ export class XenoWorld {
             shroom.scale.set(randScale, randScale, randScale);
 
             this.group.add(shroom);
-            this.mushrooms.push({ mesh: shroom, light: pinkLight, seed: idx * 2.0 });
+            this.mushrooms.push({ mesh: shroom, light: pinkLight, seed: idx * 2.0, baseY: gy });
         });
 
         // --- 9. Stylized Fluffy Pink Blossom Trees with Quad Leaves (Skill Forest) ---
-        const treeBaseX = 25;
-        const treeBaseZ = 20;
-        
+        const isPositionClear = (x, z, scale, existingTrees) => {
+            const distFromCenter = Math.sqrt(x * x + z * z);
+            
+            // Spawn pad boundary
+            if (distFromCenter < 12.0) return false;
+            
+            // Playable area boundary
+            if (distFromCenter > 95.0) return false;
+
+            // Check against existing trees
+            for (const tree of existingTrees) {
+                const dx = x - tree.tx;
+                const dz = z - tree.tz;
+                const minDist = (scale + tree.scale) * 1.5;
+                if (dx * dx + dz * dz < minDist * minDist) {
+                    return false;
+                }
+            }
+
+            // Check against stacked plateaus
+            const plateaus = [
+                { x: -25, z: -15, scale: 1.4 },
+                { x: 30, z: -35, scale: 1.6 },
+                { x: -35, z: 25, scale: 1.2 },
+                { x: 40, z: 20, scale: 1.5 },
+                { x: -10, z: -40, scale: 1.3 },
+                { x: 20, z: 45, scale: 1.5 }
+            ];
+            for (const p of plateaus) {
+                const dx = x - p.x;
+                const dz = z - p.z;
+                const minDist = 6.0 * p.scale + 2.5;
+                if (dx * dx + dz * dz < minDist * minDist) return false;
+            }
+
+            // Check against spire rocks
+            const spires = [
+                { x: -55, z: -45, scale: 1.2 }, { x: 55, z: -55, scale: 1.4 },
+                { x: -60, z: 50, scale: 1.5 }, { x: 65, z: 45, scale: 1.3 },
+                { x: -80, z: -20, scale: 1.6 }, { x: 80, z: -10, scale: 1.4 },
+                { x: -75, z: 75, scale: 1.7 }, { x: 75, z: 70, scale: 1.5 },
+                { x: -100, z: -80, scale: 1.8 }, { x: 90, z: -90, scale: 1.6 },
+                { x: -95, z: 95, scale: 1.9 }, { x: 100, z: 90, scale: 1.7 },
+                { x: 0, z: -95, scale: 1.5 }, { x: -110, z: 10, scale: 1.8 },
+                { x: 110, z: -20, scale: 1.7 }
+            ];
+            for (const s of spires) {
+                const dx = x - s.x;
+                const dz = z - s.z;
+                const minDist = 2.5 * s.scale + 3.0;
+                if (dx * dx + dz * dz < minDist * minDist) return false;
+            }
+
+            // Check against boulders
+            const boulders = [
+                { x: -15, z: 25 }, { x: -35, z: -10 }, { x: 30, z: -25 },
+                { x: -28, z: 32 }, { x: 25, z: -5 }, { x: -8, z: 25 },
+                { x: 35, z: 35 }, { x: -40, z: -35 }, { x: 42, z: -15 }
+            ];
+            for (const b of boulders) {
+                const dx = x - b.x;
+                const dz = z - b.z;
+                if (dx * dx + dz * dz < 5.5 * 5.5) return false;
+            }
+
+            // Check against crystals
+            const crystals = [
+                { x: -6, z: -18 }, { x: -4.5, z: -18 }, { x: -3, z: -18 },
+                { x: -5.25, z: -19.5 }, { x: -3.75, z: -19.5 }
+            ];
+            for (const c of crystals) {
+                const dx = x - c.x;
+                const dz = z - c.z;
+                if (dx * dx + dz * dz < 4.0 * 4.0) return false;
+            }
+
+            // Check against puddles
+            const puddles = [
+                { x: 18, z: -15 }, { x: -22, z: -12 }, { x: -14, z: 20 }, { x: 28, z: -28 }
+            ];
+            for (const pud of puddles) {
+                const dx = x - pud.x;
+                const dz = z - pud.z;
+                if (dx * dx + dz * dz < 6.0 * 6.0) return false;
+            }
+
+            // Check against ramps (centered at (0, -10))
+            const dxRamp = x - 0;
+            const dzRamp = z - (-10);
+            if (dxRamp * dxRamp + dzRamp * dzRamp < 9.0 * 9.0) return false;
+
+            // Check against signs
+            const signs = [
+                { x: -18, z: 12 }, { x: 18, z: 18 }
+            ];
+            for (const s of signs) {
+                const dx = x - s.x;
+                const dz = z - s.z;
+                if (dx * dx + dz * dz < 6.0 * 6.0) return false;
+            }
+
+            // Check against project portal
+            const dxPortal = x - 0;
+            const dzPortal = z - (-32);
+            if (dxPortal * dxPortal + dzPortal * dzPortal < 8.0 * 8.0) return false;
+
+            // Check against transmission beacon
+            const dxBeacon = x - 0;
+            const dzBeacon = z - 35;
+            if (dxBeacon * dxBeacon + dzBeacon * dzBeacon < 7.5 * 7.5) return false;
+
+            return true;
+        };
+
+        const totalNumTrees = 42;
+        const treeDefs = [];
+        let runningLeafCount = 0;
+
+        for (let i = 0; i < totalNumTrees; i++) {
+            let tx = 0, tz = 0, S = 1.0;
+            let found = false;
+            
+            for (let attempt = 0; attempt < 100; attempt++) {
+                const rx = (Math.random() - 0.5) * 190;
+                const rz = (Math.random() - 0.5) * 190;
+                const randScale = 3.0 + Math.random() * 3.0; // 3X - 6X scaling
+                
+                if (isPositionClear(rx, rz, randScale, treeDefs)) {
+                    tx = rx;
+                    tz = rz;
+                    S = randScale;
+                    found = true;
+                    break;
+                }
+            }
+            
+            if (!found) continue;
+
+            const style = Math.floor(Math.random() * 4);
+            const numLeaves = Math.floor(350 + (S - 3.0) * 150); // density scales with tree size
+            
+            treeDefs.push({
+                tx,
+                tz,
+                scale: S,
+                style,
+                numLeaves,
+                leafStartIndex: runningLeafCount
+            });
+            runningLeafCount += numLeaves;
+        }
+
+        this.leafCount = runningLeafCount;
+
         this.leafPositions = new Float32Array(this.leafCount * 3);
         this.leafRotations = new Float32Array(this.leafCount * 3);
         this.leafScales = new Float32Array(this.leafCount * 3);
         this.leafSeeds = new Float32Array(this.leafCount);
 
-        const leafColors = [0xff007f, 0xff5ea6, 0xff8ab2, 0xf72585];
         const color = new THREE.Color();
         const dummy = new THREE.Object3D();
 
-        // Smaller leaf geometry (matching user request)
         const leafGeom = new THREE.PlaneGeometry(0.24, 0.17);
         const leafMat = new THREE.MeshStandardMaterial({
-            color: 0xffffff, // Tinted by instance colors
-            emissive: 0xff007f,
-            emissiveIntensity: 0.2,
-            roughness: 0.5,
-            metalness: 0.1,
+            color: 0xffffff,
+            emissive: 0x000000, // Disabled neon glow for cartoon daylight forest
+            emissiveIntensity: 0.0,
+            roughness: 0.6,
+            metalness: 0.05,
             flatShading: true,
             side: THREE.DoubleSide
         });
@@ -404,99 +574,301 @@ export class XenoWorld {
         this.leafMesh.castShadow = true;
         this.leafMesh.receiveShadow = true;
 
-        for (let i = 0; i < 9; i++) {
-            const angle = (i / 9) * Math.PI * 2;
-            const radius = 5 + Math.random() * 3;
-            const tx = treeBaseX + Math.cos(angle) * radius;
-            const tz = treeBaseZ + Math.sin(angle) * radius;
+        const greenColors = [0x3cb83c, 0x5cb85c, 0x7ec850, 0x4caf50];       // Lush green
+        const redColors = [0xe53935, 0xff5252, 0xd32f2f, 0xff7043];         // Crimson/red
+        const yellowOrangeColors = [0xffa726, 0xffb74d, 0xffcc00, 0xffeb3b]; // Yellow/orange
+
+        const palettes = [greenColors, redColors, yellowOrangeColors];
+        const lightColors = [0x4caf50, 0xff5252, 0xffb74d]; // Match local lights to leaf theme
+
+        treeDefs.forEach((def, i) => {
+            const { tx, tz, scale, style, numLeaves, leafStartIndex } = def;
             const gy = getTerrainHeight(tx, tz);
 
             const tree = new THREE.Group();
             
-            // Random trunk height, width, and taper representing natural variance
-            const baseHeight = 1.3 + Math.random() * 1.3; // 1.3 to 2.6 units high
-            const baseRadius = 0.08 + Math.random() * 0.12; // 0.08 to 0.20 units wide
-            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(baseRadius * 0.6, baseRadius, baseHeight, 5), trunkMat);
+            const themeIndex = Math.floor(Math.random() * 3);
+            const leafColors = palettes[themeIndex];
+            const lightColor = lightColors[themeIndex];
+
+            const baseHeight = (1.3 + Math.random() * 0.7) * scale; 
+            const baseRadius = (0.08 + Math.random() * 0.06) * scale * 0.7;
+            
+            const trunk = new THREE.Mesh(
+                new THREE.CylinderGeometry(baseRadius * 0.5, baseRadius, baseHeight, 6), 
+                trunkMat
+            );
             trunk.position.y = baseHeight / 2;
             trunk.castShadow = true;
+            trunk.receiveShadow = true;
             tree.add(trunk);
 
-            // Local green/cyan point light inside leaves (adjust height to fit the trunk)
             const treeLight = new THREE.PointLight(
-                0xff00a0, 
-                0.8 + Math.random() * 0.8, 
-                5.0 + Math.random() * 4.0, 
+                lightColor, 
+                1.0 + Math.random() * 0.8, 
+                8.0 + scale * 2.0, 
                 1.2
             );
-            treeLight.position.set(0, baseHeight + 0.2, 0);
+            treeLight.position.set(0, baseHeight + 0.5, 0);
             tree.add(treeLight);
             this.treeLights.push({ light: treeLight, seed: i * 1.5 });
+
+            const clumps = [];
+            
+            clumps.push({
+                center: new THREE.Vector3(0, baseHeight, 0),
+                radius: (0.7 + Math.random() * 0.7) * scale * 0.6,
+                scaleX: 1.0,
+                scaleY: 0.9,
+                scaleZ: 1.0,
+                weight: 1.0,
+                downwardBias: false
+            });
+
+            if (style === 0) {
+                const numBranches = 3 + Math.floor(Math.random() * 3);
+                for (let b = 0; b < numBranches; b++) {
+                    const branchLength = baseHeight * (0.35 + Math.random() * 0.35);
+                    const branchRadius = baseRadius * 0.45;
+                    const startHeight = baseHeight * (0.45 + Math.random() * 0.4);
+                    
+                    const branchAngle = (b / numBranches) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+                    const branchInclination = 0.5 + Math.random() * 0.4;
+                    
+                    const branchGeom = new THREE.CylinderGeometry(branchRadius * 0.4, branchRadius, branchLength, 5);
+                    const branchMesh = new THREE.Mesh(branchGeom, trunkMat);
+                    branchMesh.castShadow = true;
+                    branchMesh.receiveShadow = true;
+                    
+                    const halfL = branchLength / 2;
+                    const dir = new THREE.Vector3(
+                        Math.cos(branchAngle) * Math.sin(branchInclination),
+                        Math.cos(branchInclination),
+                        Math.sin(branchAngle) * Math.sin(branchInclination)
+                    ).normalize();
+                    
+                    branchMesh.position.set(dir.x * halfL, startHeight + dir.y * halfL, dir.z * halfL);
+                    const quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+                    branchMesh.setRotationFromQuaternion(quat);
+                    tree.add(branchMesh);
+                    
+                    clumps.push({
+                        center: new THREE.Vector3(dir.x * branchLength, startHeight + dir.y * branchLength, dir.z * branchLength),
+                        radius: (0.5 + Math.random() * 0.5) * scale * 0.5,
+                        scaleX: 1.0,
+                        scaleY: 0.9,
+                        scaleZ: 1.0,
+                        weight: 1.2,
+                        downwardBias: false
+                    });
+                }
+            } else if (style === 1) {
+                clumps.length = 0;
+                const numTiers = 3 + Math.floor(Math.random() * 2);
+                for (let t = 0; t < numTiers; t++) {
+                    const progress = (t + 1) / (numTiers + 0.5);
+                    const tierHeight = baseHeight * progress;
+                    const tierRadius = baseHeight * 0.3 * (1.0 - progress * 0.5);
+                    
+                    const numTierBranches = 4;
+                    for (let tb = 0; tb < numTierBranches; tb++) {
+                        const angle = (tb / numTierBranches) * Math.PI * 2 + t * 0.5;
+                        const brLength = tierRadius;
+                        const brGeom = new THREE.CylinderGeometry(baseRadius * 0.25, baseRadius * 0.35, brLength, 4);
+                        const brMesh = new THREE.Mesh(brGeom, trunkMat);
+                        brMesh.castShadow = true;
+                        brMesh.receiveShadow = true;
+                        
+                        brMesh.position.set(
+                            Math.cos(angle) * (brLength / 2),
+                            tierHeight,
+                            Math.sin(angle) * (brLength / 2)
+                        );
+                        
+                        const dir = new THREE.Vector3(Math.cos(angle), 0, Math.sin(angle)).normalize();
+                        const quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+                        brMesh.setRotationFromQuaternion(quat);
+                        tree.add(brMesh);
+                    }
+
+                    clumps.push({
+                        center: new THREE.Vector3(0, tierHeight, 0),
+                        radius: tierRadius,
+                        scaleX: 1.25,
+                        scaleY: 0.22,
+                        scaleZ: 1.25,
+                        weight: 1.0,
+                        downwardBias: false
+                    });
+                }
+            } else if (style === 2) {
+                clumps.length = 0;
+                const numForks = 3 + Math.floor(Math.random() * 2);
+                for (let f = 0; f < numForks; f++) {
+                    const forkAngle = (f / numForks) * Math.PI * 2 + (Math.random() - 0.5) * 0.3;
+                    const forkLength = baseHeight * (0.35 + Math.random() * 0.15);
+                    const forkInclination = 1.1 + Math.random() * 0.3;
+                    
+                    const fGeom = new THREE.CylinderGeometry(baseRadius * 0.3, baseRadius * 0.45, forkLength, 4);
+                    const fMesh = new THREE.Mesh(fGeom, trunkMat);
+                    fMesh.castShadow = true;
+                    fMesh.receiveShadow = true;
+                    
+                    const dir = new THREE.Vector3(
+                        Math.cos(forkAngle) * Math.sin(forkInclination),
+                        Math.cos(forkInclination),
+                        Math.sin(forkAngle) * Math.sin(forkInclination)
+                    ).normalize();
+                    
+                    const halfL = forkLength / 2;
+                    fMesh.position.set(dir.x * halfL, baseHeight * 0.82 + dir.y * halfL, dir.z * halfL);
+                    const quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+                    fMesh.setRotationFromQuaternion(quat);
+                    tree.add(fMesh);
+                }
+                
+                clumps.push({
+                    center: new THREE.Vector3(0, baseHeight * 1.02, 0),
+                    radius: baseHeight * 0.42,
+                    scaleX: 1.75,
+                    scaleY: 0.22,
+                    scaleZ: 1.75,
+                    weight: 1.0,
+                    downwardBias: false
+                });
+            } else if (style === 3) {
+                const numBranches = 3 + Math.floor(Math.random() * 2);
+                for (let b = 0; b < numBranches; b++) {
+                    const branchAngle = (b / numBranches) * Math.PI * 2;
+                    const seg1L = baseHeight * 0.3;
+                    const seg2L = baseHeight * 0.25;
+                    
+                    const s1Geom = new THREE.CylinderGeometry(baseRadius * 0.35, baseRadius * 0.45, seg1L, 4);
+                    const s1Mesh = new THREE.Mesh(s1Geom, trunkMat);
+                    s1Mesh.castShadow = true;
+                    s1Mesh.receiveShadow = true;
+                    const inc1 = 0.6 + Math.random() * 0.3;
+                    const dir1 = new THREE.Vector3(Math.cos(branchAngle) * Math.sin(inc1), Math.cos(inc1), Math.sin(branchAngle) * Math.sin(inc1)).normalize();
+                    s1Mesh.position.set(dir1.x * (seg1L/2), baseHeight * 0.72 + dir1.y * (seg1L/2), dir1.z * (seg1L/2));
+                    const quat1 = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir1);
+                    s1Mesh.setRotationFromQuaternion(quat1);
+                    tree.add(s1Mesh);
+                    
+                    const s2Geom = new THREE.CylinderGeometry(baseRadius * 0.2, baseRadius * 0.35, seg2L, 4);
+                    const s2Mesh = new THREE.Mesh(s2Geom, trunkMat);
+                    s2Mesh.castShadow = true;
+                    s2Mesh.receiveShadow = true;
+                    const inc2 = 1.8 + Math.random() * 0.4;
+                    const dir2 = new THREE.Vector3(Math.cos(branchAngle) * Math.sin(inc2), Math.cos(inc2), Math.sin(branchAngle) * Math.sin(inc2)).normalize();
+                    const s1End = dir1.clone().multiplyScalar(seg1L).add(new THREE.Vector3(0, baseHeight * 0.72, 0));
+                    s2Mesh.position.set(s1End.x + dir2.x * (seg2L/2), s1End.y + dir2.y * (seg2L/2), s1End.z + dir2.z * (seg2L/2));
+                    const quat2 = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir2);
+                    s2Mesh.setRotationFromQuaternion(quat2);
+                    tree.add(s2Mesh);
+                    
+                    const s2End = s1End.clone().add(dir2.clone().multiplyScalar(seg2L));
+                    clumps.push({
+                        center: s2End,
+                        radius: (0.7 + Math.random() * 0.4) * scale * 0.55,
+                        scaleX: 0.9,
+                        scaleY: 1.45,
+                        scaleZ: 0.9,
+                        weight: 1.0,
+                        downwardBias: true
+                    });
+                }
+            }
 
             tree.position.set(tx, gy, tz);
             this.group.add(tree);
 
-            // Unique canopy shape factors (varying radius, vertical squishing, and directional scaling)
-            const cx = tx;
-            const cy = gy + baseHeight + 0.2;
-            const cz = tz;
+            const totalWeight = clumps.reduce((sum, cl) => sum + cl.weight, 0);
+            
+            for (let j = 0; j < numLeaves; j++) {
+                const leafIndex = leafStartIndex + j;
 
-            const canopyRadius = 0.7 + Math.random() * 0.8; // 0.7 to 1.5 radius
-            const squishY = 0.5 + Math.random() * 0.45; // vertical squishing variation
-            const scaleX = 0.7 + Math.random() * 0.7; // elliptical stretch X
-            const scaleZ = 0.7 + Math.random() * 0.7; // elliptical stretch Z
+                let randWeight = Math.random() * totalWeight;
+                let selectedClump = clumps[0];
+                for (const cl of clumps) {
+                    if (randWeight < cl.weight) {
+                        selectedClump = cl;
+                        break;
+                    }
+                    randWeight -= cl.weight;
+                }
 
-            for (let j = 0; j < 150; j++) {
-                const leafIndex = i * 150 + j;
-
-                // Spherical random offset
                 const u = Math.random();
                 const v = Math.random();
                 const theta = u * 2.0 * Math.PI;
                 const phi = Math.acos(2.0 * v - 1.0);
                 
-                const r = 0.1 + Math.random() * canopyRadius;
+                const r = (0.15 + Math.random() * 0.85) * selectedClump.radius;
                 
-                // Position applying our customized tree canopy shape scaling
-                const lx = cx + r * Math.sin(phi) * Math.cos(theta) * scaleX;
-                const ly = cy + r * Math.sin(phi) * Math.sin(theta) * squishY;
-                const lz = cz + r * Math.cos(phi) * scaleZ;
+                let ox = r * Math.sin(phi) * Math.cos(theta) * selectedClump.scaleX;
+                let oy = r * Math.sin(phi) * Math.sin(theta) * selectedClump.scaleY;
+                let oz = r * Math.cos(phi) * selectedClump.scaleZ;
+                
+                if (selectedClump.downwardBias) {
+                    oy -= r * 0.35;
+                }
+                
+                const lx_local = selectedClump.center.x + ox;
+                const ly_local = selectedClump.center.y + oy;
+                const lz_local = selectedClump.center.z + oz;
+                
+                const lx = tx + lx_local;
+                const ly = gy + ly_local;
+                const lz = tz + lz_local;
 
                 this.leafPositions[leafIndex * 3] = lx;
                 this.leafPositions[leafIndex * 3 + 1] = ly;
                 this.leafPositions[leafIndex * 3 + 2] = lz;
 
-                // Rotations facing outward with random variations
                 const tempObj = new THREE.Object3D();
                 tempObj.position.set(lx, ly, lz);
-                tempObj.lookAt(cx, cy, cz);
-                tempObj.rotation.y += Math.PI + (Math.random() - 0.5) * 1.0;
-                tempObj.rotation.x += (Math.random() - 0.5) * 1.0;
-                tempObj.rotation.z += (Math.random() - 0.5) * 1.5;
+                
+                const worldClumpCenter = selectedClump.center.clone().add(new THREE.Vector3(tx, gy, tz));
+                tempObj.lookAt(worldClumpCenter);
+                
+                if (selectedClump.downwardBias) {
+                    tempObj.rotation.x += Math.PI / 2 + (Math.random() - 0.5) * 0.6;
+                } else {
+                    tempObj.rotation.y += Math.PI + (Math.random() - 0.5) * 1.2;
+                    tempObj.rotation.x += (Math.random() - 0.5) * 1.2;
+                }
+                tempObj.rotation.z += (Math.random() - 0.5) * 1.8;
 
                 this.leafRotations[leafIndex * 3] = tempObj.rotation.x;
                 this.leafRotations[leafIndex * 3 + 1] = tempObj.rotation.y;
                 this.leafRotations[leafIndex * 3 + 2] = tempObj.rotation.z;
 
-                // Scale leaf
-                const s = 0.7 + Math.random() * 0.7;
+                const s = 0.55 + Math.random() * 0.65;
                 this.leafScales[leafIndex * 3] = s;
                 this.leafScales[leafIndex * 3 + 1] = s;
                 this.leafScales[leafIndex * 3 + 2] = s;
 
                 this.leafSeeds[leafIndex] = Math.random() * 100.0;
 
-                // Set initial transform
                 dummy.position.set(lx, ly, lz);
                 dummy.rotation.copy(tempObj.rotation);
                 dummy.scale.set(s, s, s);
                 dummy.updateMatrix();
                 this.leafMesh.setMatrixAt(leafIndex, dummy.matrix);
 
-                // Set random shade of pink
                 color.setHex(leafColors[Math.floor(Math.random() * leafColors.length)]);
                 this.leafMesh.setColorAt(leafIndex, color);
             }
-        }
+
+            this.trees.push({
+                group: tree,
+                center: new THREE.Vector3(tx, gy + baseHeight + 1.0, tz),
+                leafStartIndex: leafStartIndex,
+                numLeaves: numLeaves,
+                wasVisible: undefined,
+                seed: i * 1.5,
+                light: treeLight
+            });
+        });
 
         this.group.add(this.leafMesh);
 
@@ -534,29 +906,7 @@ export class XenoWorld {
         });
 
         // --- 11. Holographic Signs ---
-        this.createSignBoard(
-            "XENO_EXPLORER // EXPEDITION BIO",
-            [
-                "EXPEDITION LEADER: BHANU",
-                "SPECIALIZATION: GRAPHICS & SIM ENGINES",
-                "DATA FILES: Blending computational mechanics",
-                "with high-fidelity visual representations.",
-                "Procedural mathematical vector grids generated",
-                "completely inside memory sockets."
-            ],
-            -18, 12, 10, 6, 0x00f0ff
-        );
-
-        this.createSignBoard(
-            "TECH // CELLULAR CONSTELLATION",
-            [
-                "ENGINES: Unity 3D, Unreal Engine 5, Godot",
-                "LANGUAGES: C++, C#, JS (ES6), GLSL Shaders, Python",
-                "WebGL CORE: Three.js Rendering, Web Audio Synth",
-                "UTILITIES: Blender Modeling, Git, Vite"
-            ],
-            18, 18, 8, 5, 0x54b334
-        );
+        // (Removed 2 UI screens from the environment as per request)
 
         // --- 12. Futuristic Project Portal Screen ---
         this.projectPortal = this.createProjectPortal(0, -32);
@@ -583,6 +933,7 @@ export class XenoWorld {
         const beaconY = getTerrainHeight(0, 35);
         beacon.position.set(0, beaconY, 35);
         this.group.add(beacon);
+        this.beaconGroup = beacon;
 
         const circleGeom = new THREE.RingGeometry(3.5, 3.7, 32);
         circleGeom.rotateX(-Math.PI / 2);
@@ -595,6 +946,7 @@ export class XenoWorld {
         const contactCircle = new THREE.Mesh(circleGeom, circleMat);
         contactCircle.position.set(0, beaconY + 0.05, 35);
         this.group.add(contactCircle);
+        this.contactCircle = contactCircle;
 
         this.contactZone = {
             center: new THREE.Vector3(0, beaconY, 35),
@@ -747,6 +1099,7 @@ export class XenoWorld {
 
         signGroup.position.set(x, gy, z);
         this.group.add(signGroup);
+        this.signGroups.push(signGroup);
     }
 
     createProjectPortal(x, z) {
@@ -863,6 +1216,7 @@ export class XenoWorld {
 
         portalGroup.position.set(x, gy, z);
         this.group.add(portalGroup);
+        this.portalGroup = portalGroup;
 
         // Register the project zone representing the portal
         this.projectZones.push({
@@ -923,10 +1277,11 @@ export class XenoWorld {
         this.grassScales = new Float32Array(this.grassCount * 3);
         this.grassYaws = new Float32Array(this.grassCount);
 
-        // Cohesive shades of Bright Green (#00FF7F) and Sky Blue (#1E90FF) with slight variations
+        // Cohesive shades of cartoon green for grass blades matching the reference image
         const colors = [
-            0x00ff7f, 0x33ff99, 0x00d86c, 0x05e580, // Bright Green variations
-            0x1e90ff, 0x3aa1ff, 0x007ce6, 0x00b0ff  // Sky Blue variations
+            0x3cb83c, 0x5cb85c, 0x449d44, // Lush grass greens
+            0x7ec850, 0x9be868, 0x61a833, // Yellow-green highlights
+            0x228b22, 0x1e561e           // Deep greens
         ];
         const color = new THREE.Color();
         const dummy = new THREE.Object3D();
@@ -936,9 +1291,14 @@ export class XenoWorld {
             const rx = (Math.random() - 0.5) * 88;
             const rz = (Math.random() - 0.5) * 88;
             
-            // Skip spawning directly on center pad
+            // Skip spawning on the center plaza
             const dist = Math.sqrt(rx * rx + rz * rz);
-            if (dist < 6.5) continue;
+            if (dist < 8.5) continue;
+
+            // Skip spawning on the winding dirt path (keeps the trail clean of vegetation)
+            const pathX = Math.sin(rz * 0.06) * 12.0 + Math.sin(rz * 0.02) * 6.0;
+            const distToPath = Math.abs(rx - pathX);
+            if (distToPath < 4.2) continue;
 
             const gy = getTerrainHeight(rx, rz);
             
@@ -966,7 +1326,6 @@ export class XenoWorld {
             // Color mix
             color.setHex(colors[Math.floor(Math.random() * colors.length)]);
             this.grassMesh.setColorAt(index, color);
-            
             index++;
         }
 
@@ -1009,6 +1368,8 @@ export class XenoWorld {
         this.group.add(this.sporeParticles);
     }
 
+
+
     update(delta, time, drone) {
         // Pulse satellite spire ring
         if (this.energyRing) {
@@ -1029,21 +1390,21 @@ export class XenoWorld {
 
         // Pulsing mushrooms
         this.mushrooms.forEach(shroom => {
-            shroom.mesh.position.y = getTerrainHeight(shroom.mesh.position.x, shroom.mesh.position.z) + Math.sin(time + shroom.seed) * 0.05;
+            shroom.mesh.position.y = shroom.baseY + Math.sin(time + shroom.seed) * 0.05;
             shroom.light.intensity = 0.8 + Math.sin(time * 3.0 + shroom.seed) * 0.4;
         });
 
         // Pulsing trees
-        this.treeLights.forEach(tree => {
+        this.trees.forEach(tree => {
             tree.light.intensity = 0.8 + Math.sin(time * 2.0 + tree.seed) * 0.3;
         });
 
         // Pulsing flower bulbs
-        this.flowerLights.forEach(flower => {
+        this.flowers.forEach(flower => {
             flower.light.intensity = 0.6 + Math.sin(time * 4.0 + flower.seed) * 0.4;
         });
 
-        // --- 1. Wind Grass Sway & Drone Interactive Bending update (optimized CPU update) ---
+        // --- 1. Wind Grass Sway & Drone Interactive Bending update (full simulation, zero culling) ---
         if (this.grassMesh) {
             const dummy = new THREE.Object3D();
             const dronePos = drone ? drone.position : null;
@@ -1070,28 +1431,22 @@ export class XenoWorld {
                     const dx = px - dronePos.x;
                     const dz = pz - dronePos.z;
                     const distSq = dx * dx + dz * dz;
-                    // Interact radius (e.g. 4.2 units around drone)
-                    const radius = 4.2;
-                    const radiusSq = radius * radius;
-
-                    if (distSq < radiusSq) {
-                        const dist = Math.sqrt(distSq);
-                        const force = 1.0 - (dist / radius); // 0 (outer edge) to 1 (center)
-                        
-                        // Push direction away from drone (adding epsilon to avoid division by zero)
-                        const angle = Math.atan2(dz, dx || 0.0001);
-                        
-                        // Bend rotation (pitch & roll) away
-                        bendX = -Math.sin(angle) * force * 1.0;
-                        bendZ = Math.cos(angle) * force * 1.0;
-                        
-                        // Flatten slightly when drone is close
-                        pushScale = 1.0 - force * 0.35;
+                    // Skip math operations for distant blades (optimization)
+                    if (distSq < 15.0 * 15.0) {
+                        const radius = 4.2;
+                        if (distSq < radius * radius) {
+                            const dist = Math.sqrt(distSq);
+                            const force = 1.0 - (dist / radius); // 0 (outer edge) to 1 (center)
+                            const angle = Math.atan2(dz, dx || 0.0001);
+                            
+                            bendX = -Math.sin(angle) * force * 1.0;
+                            bendZ = Math.cos(angle) * force * 1.0;
+                            pushScale = 1.0 - force * 0.35;
+                        }
                     }
                 }
 
                 dummy.position.set(px, py, pz);
-                // Rotate Yaw, and apply combined wind + drone bending using 'YXZ' order
                 dummy.rotation.set(sway * 0.4 + bendX, yaw, sway + bendZ, 'YXZ');
                 dummy.scale.set(sxz, sy * pushScale, sxz);
                 dummy.updateMatrix();
@@ -1101,7 +1456,7 @@ export class XenoWorld {
             this.grassMesh.instanceMatrix.needsUpdate = true;
         }
 
-        // --- 1b. Wind Tree Leaf Flutter update (optimized CPU update) ---
+        // --- 1b. Wind Tree Leaf Flutter update ---
         if (this.leafMesh) {
             const dummy = new THREE.Object3D();
             for (let i = 0; i < this.leafCount; i++) {
@@ -1115,7 +1470,7 @@ export class XenoWorld {
                 const s = this.leafScales[i3];
                 const seed = this.leafSeeds[i];
 
-                // Flutter rotation offset in wind (adding subtle variety per leaf instance)
+                // Flutter rotation offset in wind
                 const flutterX = Math.sin(time * 4.5 + seed) * 0.08;
                 const flutterY = Math.cos(time * 3.8 + seed) * 0.08;
                 const flutterZ = Math.sin(time * 5.2 + seed) * 0.12;
@@ -1224,21 +1579,23 @@ export class XenoWorld {
         }
 
         // --- 5. Animate Project Showcase Portal Screen (Swirl & Orbiting Debris) ---
-        if (this.portalCore) {
-            this.portalCore.rotation.z = time * 0.8;
-        }
-        if (this.portalInnerCore) {
-            this.portalInnerCore.rotation.z = -time * 1.6;
-        }
-        if (this.portalDebris) {
-            this.portalDebris.forEach(d => {
-                d.angle += d.speed * delta;
-                d.mesh.position.x = Math.cos(d.angle) * d.radius;
-                d.mesh.position.z = Math.sin(d.angle) * d.radius;
-                d.mesh.position.y = d.yOffset + Math.sin(time * 2.0 + d.angle) * 0.15;
-                d.mesh.rotation.x += delta;
-                d.mesh.rotation.y += delta * 0.5;
-            });
+        if (this.portalGroup) {
+            if (this.portalCore) {
+                this.portalCore.rotation.z = time * 0.8;
+            }
+            if (this.portalInnerCore) {
+                this.portalInnerCore.rotation.z = -time * 1.6;
+            }
+            if (this.portalDebris) {
+                this.portalDebris.forEach(d => {
+                    d.angle += d.speed * delta;
+                    d.mesh.position.x = Math.cos(d.angle) * d.radius;
+                    d.mesh.position.z = Math.sin(d.angle) * d.radius;
+                    d.mesh.position.y = d.yOffset + Math.sin(time * 2.0 + d.angle) * 0.15;
+                    d.mesh.rotation.x += delta;
+                    d.mesh.rotation.y += delta * 0.5;
+                });
+            }
         }
     }
 }

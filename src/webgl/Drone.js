@@ -161,7 +161,7 @@ const DRONE_CONFIGS = {
         materialMap: (material, name) => {
             const lowerName = name.toLowerCase();
             if (lowerName.includes('material') && !lowerName.includes('00')) {
-                return { color: 0x075e7a, metalness: 0.95, roughness: 0.1 }; // Metallic teal
+                return { color: 0xff6600, metalness: 0.95, roughness: 0.15 }; // Vibrant metallic orange (contrast against green/blue environment)
             } else if (lowerName.includes('003') || lowerName.includes('004')) {
                 return { color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 2.2, metalness: 0.5, roughness: 0.1 }; // Neon cyan glow
             } else if (lowerName.includes('001')) {
@@ -239,7 +239,7 @@ export class Drone {
         // Mesh parts for visual effects
         this.thrusters = [];
         this.flameMats = [];
-        this.currentType = 'default';
+        this.currentType = 'cyan-dart';
         this.currentLoadId = 0;
         
         this.init();
@@ -1323,16 +1323,25 @@ export class Drone {
     }
 
     buildCyanDartModel() {
-        // --- 1. Fuselage (Narrow fighter jet body, dark graphite) ---
+        // --- 1. Fuselage (Narrow fighter jet body, vibrant metallic orange) ---
         const bodyGeom = new THREE.CylinderGeometry(0.12, 0.35, 2.3, 12);
         bodyGeom.rotateX(Math.PI / 2);
+        
         const bodyMat = new THREE.MeshStandardMaterial({
             color: 0x1c1e24,
             roughness: 0.2,
             metalness: 0.8,
             flatShading: false
         });
-        const fuselage = new THREE.Mesh(bodyGeom, bodyMat);
+
+        const orangeMat = new THREE.MeshStandardMaterial({
+            color: 0xff6600, // Vibrant metallic orange
+            roughness: 0.15,
+            metalness: 0.95,
+            flatShading: false
+        });
+
+        const fuselage = new THREE.Mesh(bodyGeom, orangeMat);
         fuselage.position.y = 0.05;
         fuselage.castShadow = true;
         fuselage.receiveShadow = true;
@@ -1383,16 +1392,16 @@ export class Drone {
         rightTip.rotation.y = -Math.PI / 8;
         this.mesh.add(rightTip);
 
-        // Stepped fin panels (3 on left wing edge, 3 on right wing edge)
+        // Stepped fin panels (3 on left wing edge, 3 on right wing edge - colored orange)
         const finGeom = new THREE.BoxGeometry(0.04, 0.14, 0.12);
         for (let i = 0; i < 3; i++) {
             const zPos = -0.15 - i * 0.22;
-            const lFin = new THREE.Mesh(finGeom, bodyMat);
+            const lFin = new THREE.Mesh(finGeom, orangeMat);
             lFin.position.set(-0.48, 0.08, zPos);
             lFin.rotation.y = Math.PI / 10;
             this.mesh.add(lFin);
 
-            const rFin = new THREE.Mesh(finGeom, bodyMat);
+            const rFin = new THREE.Mesh(finGeom, orangeMat);
             rFin.position.set(0.48, 0.08, zPos);
             rFin.rotation.y = -Math.PI / 10;
             this.mesh.add(rFin);

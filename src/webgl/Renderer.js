@@ -22,22 +22,33 @@ export class WebGLRendererManager {
         this.starfield = null;
         this.skyIslands = [];
         this.clouds = [];
+        this.birds = [];
         this.shootingStars = [];
         this.aurora1 = null;
         this.aurora2 = null;
 
-        // Lighting Multiplier settings
+        // Lighting Multiplier and Presets settings
         this.lightMultiplier = 1.0;
+        this.currentPreset = 'afternoon';
         this.warmSun = null;
         this.coolSun = null;
         this.moonLight = null;
         this.hemiLight = null;
+        this.starfieldMaterial = null;
+        this.giantMoon = null;
+        this.sun1 = null;
+        this.sun2 = null;
+        this.sun1Glow = null;
+        this.sun2Glow = null;
 
         // Camera Follow helpers
         this.currentLookTarget = new THREE.Vector3(0, 0.8, 0);
         
         // Input state passed from main.js
         this.keys = {};
+
+        // Pause/Resume state for dual-mode support
+        this.isPaused = false;
 
         this.init();
     }
@@ -90,12 +101,14 @@ export class WebGLRendererManager {
         warmSun.shadow.camera.bottom = -d;
         warmSun.shadow.bias = -0.001;
         this.scene.add(warmSun);
+        this.scene.add(warmSun.target);
         this.warmSun = warmSun;
 
         // 4c. Sun 2: Cool Purple Star (rim fill light, 10X intensity!)
         const coolSun = new THREE.DirectionalLight(0x7b2cbf, 14.0); 
         coolSun.position.set(-30, 25, 20); // positioned front/left
         this.scene.add(coolSun);
+        this.scene.add(coolSun.target);
         this.coolSun = coolSun;
 
         // 4d. Moon 1: Purple/Indigo Moon DirectionalLight (casts nighttime shadows, 10X intensity!)
@@ -112,6 +125,7 @@ export class WebGLRendererManager {
         moonLight.shadow.camera.bottom = -60;
         moonLight.shadow.bias = -0.002;
         this.scene.add(moonLight);
+        this.scene.add(moonLight.target);
         this.moonLight = moonLight;
 
         // --- 5. Spawn Entities ---
@@ -129,15 +143,22 @@ export class WebGLRendererManager {
         this.droneGlow.shadow.bias = -0.002;
         this.scene.add(this.droneGlow);
 
+        // Default to Cyan Dart Jet chassis at startup
+        this.setDroneType('cyan-dart');
+
         // --- 6. Atmospheric Assets & Celestial Bodies ---
         this.createStarfield();
         this.createSkyIslands();
         this.createCelestialSky();
         this.createAurora();
         this.createClouds();
+        this.createBirds();
 
         // --- 7. Resize Listener ---
         window.addEventListener('resize', () => this.handleResize());
+
+        // Initialize lighting preset
+        this.setLightingPreset('afternoon');
 
         // --- 8. Start Loop ---
         this.tick();
@@ -187,6 +208,7 @@ export class WebGLRendererManager {
             opacity: 0.85,
             sizeAttenuation: true
         });
+        this.starfieldMaterial = mat;
 
         const starPoints = new THREE.Points(geom, mat);
         this.starfield.add(starPoints);
@@ -310,6 +332,7 @@ export class WebGLRendererManager {
         const moon = new THREE.Mesh(moonGeom, moonMat);
         moon.position.set(5, 24, 75); // Suspended in front of spawn view
         this.scene.add(moon);
+        this.giantMoon = moon;
 
         // Giant Moon glowing outer corona/halo
         const moonHaloGeom = new THREE.SphereGeometry(24.5, 16, 16);
@@ -328,6 +351,7 @@ export class WebGLRendererManager {
         const sun1 = new THREE.Mesh(sun1Geom, sun1Mat);
         sun1.position.set(-18, 32, 70);
         this.scene.add(sun1);
+        this.sun1 = sun1;
         
         // Sun 1 white/cyan corona glow
         const sun1HaloGeom = new THREE.SphereGeometry(6.6, 16, 16);
@@ -344,6 +368,7 @@ export class WebGLRendererManager {
         const sun1Glow = new THREE.PointLight(0x00f0ff, 4.0, 60, 1.2);
         sun1Glow.position.copy(sun1.position);
         this.scene.add(sun1Glow);
+        this.sun1Glow = sun1Glow;
 
         // --- 3. Glowing Yellow Sun (Right) ---
         const sun2Geom = new THREE.SphereGeometry(3.5, 16, 16);
@@ -351,6 +376,7 @@ export class WebGLRendererManager {
         const sun2 = new THREE.Mesh(sun2Geom, sun2Mat);
         sun2.position.set(22, 16, 65);
         this.scene.add(sun2);
+        this.sun2 = sun2;
         
         // Sun 2 warm golden corona glow
         const sun2HaloGeom = new THREE.SphereGeometry(4.8, 16, 16);
@@ -367,6 +393,7 @@ export class WebGLRendererManager {
         const sun2Glow = new THREE.PointLight(0xffb700, 3.0, 50, 1.2);
         sun2Glow.position.copy(sun2.position);
         this.scene.add(sun2Glow);
+        this.sun2Glow = sun2Glow;
     }
 
     createAurora() {
@@ -402,16 +429,16 @@ export class WebGLRendererManager {
     createClouds() {
         this.clouds = [];
         const cloudMat = new THREE.MeshStandardMaterial({
-            color: 0xd6e4f0,
-            roughness: 0.75,
-            metalness: 0.1,
+            color: 0xffffff, // Bright white clouds
+            roughness: 0.9,
+            metalness: 0.0,
             transparent: true,
-            opacity: 0.72,
+            opacity: 0.92,
             flatShading: true
         });
         
-        // Spawn 6 drifting low-poly cloud puff clusters
-        for (let i = 0; i < 6; i++) {
+        // Spawn 14 drifting low-poly cloud puff clusters for full sky coverage
+        for (let i = 0; i < 14; i++) {
             const cloudGroup = new THREE.Group();
             
             // Build 4 to 6 overlapping flat spheroids per cloud
@@ -421,7 +448,7 @@ export class WebGLRendererManager {
                 const puff = new THREE.Mesh(puffGeom, cloudMat);
                 puff.scale.set(1.6, 0.75, 1.0); // flat cartoon layout
                 puff.position.set(
-                    (j - puffs/2) * 1.8,
+                    (j - puffs / 2) * 1.8,
                     (Math.random() - 0.5) * 0.4,
                     (Math.random() - 0.5) * 1.0
                 );
@@ -429,16 +456,80 @@ export class WebGLRendererManager {
                 cloudGroup.add(puff);
             }
             
-            const cx = (Math.random() - 0.5) * 80;
-            const cy = 20 + Math.random() * 10; // high float altitude
-            const cz = -20 + Math.random() * 80; // place in viewing frustum
+            // Wider horizontal, height, and depth dispersion
+            const cx = (Math.random() - 0.5) * 160;
+            const cy = 22 + Math.random() * 12; // high float altitude
+            const cz = -60 + Math.random() * 140; // place in viewing frustum
             
             cloudGroup.position.set(cx, cy, cz);
             this.scene.add(cloudGroup);
             
             this.clouds.push({
                 mesh: cloudGroup,
-                speed: 0.4 + Math.random() * 0.7
+                speed: 0.6 + Math.random() * 0.9
+            });
+        }
+    }
+
+    createBirds() {
+        this.birds = [];
+        
+        // Low-poly bird material
+        const birdMat = new THREE.MeshStandardMaterial({
+            color: 0x4f5d75, // slate-grey bird feathers
+            roughness: 0.7,
+            metalness: 0.1,
+            flatShading: true,
+            side: THREE.DoubleSide
+        });
+
+        // Spawn 7 flying birds scattered in the sky
+        for (let i = 0; i < 7; i++) {
+            const birdGroup = new THREE.Group();
+            
+            // Bird body: narrow cone pointing forward (+Z in local coords)
+            const bodyGeom = new THREE.ConeGeometry(0.12, 0.5, 4);
+            bodyGeom.rotateX(Math.PI / 2); // align forward along Z axis
+            const body = new THREE.Mesh(bodyGeom, birdMat);
+            body.castShadow = true;
+            birdGroup.add(body);
+            
+            // Left wing with offset pivot
+            const leftWingGroup = new THREE.Group();
+            const leftWingMesh = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.015, 0.15), birdMat);
+            leftWingMesh.position.x = -0.275; // pivot joint offset
+            leftWingGroup.add(leftWingMesh);
+            leftWingGroup.position.set(-0.06, 0, 0);
+            birdGroup.add(leftWingGroup);
+            
+            // Right wing with offset pivot
+            const rightWingGroup = new THREE.Group();
+            const rightWingMesh = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.015, 0.15), birdMat);
+            rightWingMesh.position.x = 0.275; // pivot joint offset
+            rightWingGroup.add(rightWingMesh);
+            rightWingGroup.position.set(0.06, 0, 0);
+            birdGroup.add(rightWingGroup);
+            
+            // Random sky coordinates
+            const bx = (Math.random() - 0.5) * 140;
+            const by = 13 + Math.random() * 9;
+            const bz = -40 + Math.random() * 110;
+            birdGroup.position.set(bx, by, bz);
+            
+            // Speed and heading direction angle
+            const speed = 4.0 + Math.random() * 3.5;
+            const angle = Math.random() * Math.PI * 2;
+            const velocity = new THREE.Vector3(Math.cos(angle) * speed, 0, Math.sin(angle) * speed);
+            
+            this.scene.add(birdGroup);
+            
+            this.birds.push({
+                group: birdGroup,
+                leftWing: leftWingGroup,
+                rightWing: rightWingGroup,
+                velocity: velocity,
+                flapSpeed: 10 + Math.random() * 6,
+                flapOffset: Math.random() * Math.PI * 2
             });
         }
     }
@@ -486,6 +577,8 @@ export class WebGLRendererManager {
     }
 
     tick() {
+        if (this.isPaused) return;
+
         requestAnimationFrame(() => this.tick());
 
         const delta = Math.min(this.clock.getDelta(), 0.1); 
@@ -506,6 +599,57 @@ export class WebGLRendererManager {
                     this.drone.position.y - 0.70,
                     this.drone.position.z
                 );
+            }
+
+            // Update directional lights to follow drone position (stabilized with shadow map texel-snapping to eliminate shimmering/jitter)
+            if (this.warmSun) {
+                const lightOffset = new THREE.Vector3(30, 45, 30);
+                const lightDir = lightOffset.clone().normalize();
+                
+                const right = new THREE.Vector3(1, 0, 0).cross(lightDir).normalize();
+                const up = lightDir.clone().cross(right).normalize();
+                
+                const x = this.drone.position.dot(right);
+                const y = this.drone.position.dot(up);
+                
+                const texelSize = 100 / 2048; // shadow camera width = 100, map size = 2048
+                const snappedX = Math.round(x / texelSize) * texelSize;
+                const snappedY = Math.round(y / texelSize) * texelSize;
+                
+                const stabilizedCenter = new THREE.Vector3()
+                    .addScaledVector(right, snappedX)
+                    .addScaledVector(up, snappedY);
+                
+                this.warmSun.position.copy(stabilizedCenter).add(lightOffset);
+                this.warmSun.target.position.copy(stabilizedCenter);
+                this.warmSun.target.updateMatrixWorld();
+            }
+            if (this.coolSun) {
+                this.coolSun.position.set(this.drone.position.x - 30, this.drone.position.y + 25, this.drone.position.z + 20);
+                this.coolSun.target.position.copy(this.drone.position);
+                this.coolSun.target.updateMatrixWorld();
+            }
+            if (this.moonLight) {
+                const lightOffset = new THREE.Vector3(5, 33, 75);
+                const lightDir = lightOffset.clone().normalize();
+                
+                const right = new THREE.Vector3(1, 0, 0).cross(lightDir).normalize();
+                const up = lightDir.clone().cross(right).normalize();
+                
+                const x = this.drone.position.dot(right);
+                const y = this.drone.position.dot(up);
+                
+                const texelSize = 120 / 1024; // shadow camera width = 120, map size = 1024
+                const snappedX = Math.round(x / texelSize) * texelSize;
+                const snappedY = Math.round(y / texelSize) * texelSize;
+                
+                const stabilizedCenter = new THREE.Vector3()
+                    .addScaledVector(right, snappedX)
+                    .addScaledVector(up, snappedY);
+                
+                this.moonLight.position.copy(stabilizedCenter).add(lightOffset);
+                this.moonLight.target.position.copy(stabilizedCenter);
+                this.moonLight.target.updateMatrixWorld();
             }
         }
 
@@ -529,10 +673,32 @@ export class WebGLRendererManager {
         if (this.clouds) {
             this.clouds.forEach(cloud => {
                 cloud.mesh.position.x += cloud.speed * delta;
-                // wrap around boundaries
-                if (cloud.mesh.position.x > 60) {
-                    cloud.mesh.position.x = -60;
+                // wrap around boundaries (wider dispersion wrap)
+                if (cloud.mesh.position.x > 90) {
+                    cloud.mesh.position.x = -90;
                 }
+            });
+        }
+
+        // Update birds flying and flapping wings
+        if (this.birds) {
+            this.birds.forEach(bird => {
+                // Fly bird forward
+                bird.group.position.addScaledVector(bird.velocity, delta);
+                
+                // Align yaw rotation to flight vector
+                bird.group.rotation.y = Math.atan2(bird.velocity.x, bird.velocity.z);
+                
+                // Flapping wings rotation pivots
+                const flap = Math.sin(time * bird.flapSpeed + bird.flapOffset) * 0.6;
+                bird.leftWing.rotation.z = flap;
+                bird.rightWing.rotation.z = -flap;
+                
+                // wrap boundaries
+                if (bird.group.position.x > 100) bird.group.position.x = -100;
+                if (bird.group.position.x < -100) bird.group.position.x = 100;
+                if (bird.group.position.z > 100) bird.group.position.z = -100;
+                if (bird.group.position.z < -100) bird.group.position.z = 100;
             });
         }
 
@@ -626,9 +792,196 @@ export class WebGLRendererManager {
 
     setLightMultiplier(value) {
         this.lightMultiplier = value;
-        if (this.warmSun) this.warmSun.intensity = 22.0 * this.lightMultiplier;
-        if (this.coolSun) this.coolSun.intensity = 14.0 * this.lightMultiplier;
-        if (this.moonLight) this.moonLight.intensity = 8.5 * this.lightMultiplier;
-        if (this.hemiLight) this.hemiLight.intensity = 0.95 * this.lightMultiplier;
+        if (this.currentPreset) {
+            this.setLightingPreset(this.currentPreset);
+        }
+    }
+
+    setLightingPreset(preset) {
+        this.currentPreset = preset;
+        
+        const presets = {
+            morning: {
+                bg: 0xffb703, // bright sunrise gold-yellow
+                fog: 0xffb703,
+                fogDensity: 0.007,
+                hemiSky: 0xffcc00,
+                hemiGround: 0x556b2f,
+                hemiIntensity: 0.9,
+                warmSunColor: 0xff6200,
+                warmSunIntensity: 20.0,
+                coolSunColor: 0x7b1fa2,
+                coolSunIntensity: 6.0,
+                moonLightColor: 0x9b5de5,
+                moonLightIntensity: 0.0,
+                starfieldOpacity: 0.0,
+                auroraOpacity1: 0.0,
+                auroraOpacity2: 0.0,
+                sunsScale: 0.6,
+                moonScale: 0.0
+            },
+            afternoon: {
+                bg: 0x87CEEB, // bright sky blue background
+                fog: 0xc6e2ff, // soft day atmospheric depth fog
+                fogDensity: 0.005, // very thin fog to see distant green mountains and trees
+                hemiSky: 0xffffff, // pure daylight hemi sky reflection
+                hemiGround: 0xb4e197, // soft green bounce
+                hemiIntensity: 1.25,
+                warmSunColor: 0xfff8e7, // warm sunlight
+                warmSunIntensity: 28.0,
+                coolSunColor: 0xe0f2fe, // cool sky reflections
+                coolSunIntensity: 8.0,
+                moonLightColor: 0xffffff,
+                moonLightIntensity: 0.0,
+                starfieldOpacity: 0.0,
+                auroraOpacity1: 0.0,
+                auroraOpacity2: 0.0,
+                sunsScale: 1.0,
+                moonScale: 0.0
+            },
+            evening: {
+                bg: 0xe36414, // deep sunset orange-red
+                fog: 0xe36414,
+                fogDensity: 0.007,
+                hemiSky: 0xff5400,
+                hemiGround: 0x3d0066,
+                hemiIntensity: 0.9,
+                warmSunColor: 0xff5c8a,
+                warmSunIntensity: 24.0,
+                coolSunColor: 0xffb700,
+                coolSunIntensity: 10.0,
+                moonLightColor: 0x9b5de5,
+                moonLightIntensity: 1.0,
+                starfieldOpacity: 0.0,
+                auroraOpacity1: 0.0,
+                auroraOpacity2: 0.0,
+                sunsScale: 0.8,
+                moonScale: 0.0
+            },
+            night: {
+                bg: 0x070b19, // deep night sky base
+                fog: 0x070b19,
+                fogDensity: 0.015,
+                hemiSky: 0x0d1b2a,
+                hemiGround: 0x011627,
+                hemiIntensity: 0.4,
+                warmSunColor: 0xffdf80,
+                warmSunIntensity: 0.0,
+                coolSunColor: 0x7b2cbf,
+                coolSunIntensity: 0.0,
+                moonLightColor: 0x38bdf8,
+                moonLightIntensity: 16.0,
+                starfieldOpacity: 0.95,
+                auroraOpacity1: 0.45,
+                auroraOpacity2: 0.40,
+                sunsScale: 0.0,
+                moonScale: 1.3
+            }
+        };
+
+        const config = presets[preset] || presets.afternoon;
+
+        // Transition background and fog
+        if (this.scene.background) this.scene.background.setHex(config.bg);
+        if (this.scene.fog) {
+            this.scene.fog.color.setHex(config.fog);
+            this.scene.fog.density = config.fogDensity;
+        }
+
+        // Transition HemisphereLight
+        if (this.hemiLight) {
+            this.hemiLight.color.setHex(config.hemiSky);
+            this.hemiLight.groundColor.setHex(config.hemiGround);
+            this.hemiLight.intensity = config.hemiIntensity * this.lightMultiplier;
+        }
+
+        // Transition Sun 1
+        if (this.warmSun) {
+            this.warmSun.color.setHex(config.warmSunColor);
+            this.warmSun.intensity = config.warmSunIntensity * this.lightMultiplier;
+        }
+        
+        // Transition Sun 2
+        if (this.coolSun) {
+            this.coolSun.color.setHex(config.coolSunColor);
+            this.coolSun.intensity = config.coolSunIntensity * this.lightMultiplier;
+        }
+
+        // Transition Moon
+        if (this.moonLight) {
+            this.moonLight.color.setHex(config.moonLightColor);
+            this.moonLight.intensity = config.moonLightIntensity * this.lightMultiplier;
+        }
+
+        // Update Starfield opacity
+        if (this.starfieldMaterial) {
+            this.starfieldMaterial.opacity = config.starfieldOpacity;
+        }
+
+        // Update Aurora opacity
+        if (this.aurora1) this.aurora1.material.opacity = config.auroraOpacity1;
+        if (this.aurora2) this.aurora2.material.opacity = config.auroraOpacity2;
+
+        // Scale and style celestial bodies dynamically
+        if (this.sun1) {
+            this.sun1.scale.setScalar(config.sunsScale);
+            this.sun1.visible = config.sunsScale > 0;
+            
+            // Re-color sun1 to a large golden-yellow sphere in afternoon
+            if (preset === 'afternoon') {
+                this.sun1.material.color.setHex(0xffcc00); // Golden Sun
+                this.sun1.scale.setScalar(config.sunsScale * 1.5); // make it larger/more majestic!
+                if (this.sun1Glow) {
+                    this.sun1Glow.color.setHex(0xffaa00);
+                    this.sun1Glow.intensity = 5.0;
+                }
+            } else {
+                this.sun1.material.color.setHex(0xffffff); // Default White Sun
+                if (this.sun1Glow) {
+                    this.sun1Glow.color.setHex(0x00f0ff);
+                    this.sun1Glow.intensity = config.sunsScale > 0 ? 4.0 : 0.0;
+                }
+            }
+        }
+        
+        if (this.sun2) {
+            // Hide sun2 (second alien sun) in afternoon for a single golden sun look
+            if (preset === 'afternoon') {
+                this.sun2.visible = false;
+                if (this.sun2Glow) this.sun2Glow.intensity = 0.0;
+            } else {
+                this.sun2.scale.setScalar(config.sunsScale);
+                this.sun2.visible = config.sunsScale > 0;
+                if (this.sun2Glow) {
+                    this.sun2Glow.intensity = config.sunsScale > 0 ? 3.0 : 0.0;
+                }
+            }
+        }
+        
+        if (this.giantMoon) {
+            this.giantMoon.scale.setScalar(config.moonScale);
+            this.giantMoon.visible = config.moonScale > 0;
+        }
+    }
+
+    setOcclusionCulling(enabled) {
+        if (this.playground) {
+            this.playground.occlusionCullingEnabled = enabled;
+        }
+    }
+
+    pause() {
+        this.isPaused = true;
+        if (audio && typeof audio.updateDroneSound === 'function') {
+            audio.updateDroneSound(0);
+        }
+    }
+
+    resume() {
+        if (this.isPaused) {
+            this.isPaused = false;
+            this.clock.getDelta(); // reset delta step
+            requestAnimationFrame(() => this.tick());
+        }
     }
 }

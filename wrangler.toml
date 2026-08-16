@@ -1,0 +1,7 @@
+name = "gamerscraft"
+compatibility_date = "2024-09-01"
+pages_build_output_dir = "./dist"
+
+# Optional Cloudflare Pages environment variables
+[vars]
+ENVIRONMENT = "production"
