@@ -1,7 +1,12 @@
 name = "gamerscraft"
+main = "src/worker.js"
 compatibility_date = "2024-09-01"
-pages_build_output_dir = "./dist"
 
-# Optional Cloudflare Pages environment variables
+# Serve Vite build output directory
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+
 [vars]
 ENVIRONMENT = "production"
